@@ -7,6 +7,8 @@ import com.mariajuliasales.service.EnterpriseService
 
 static void main(String[] args) {
 
+    // Maria Julia Sales - 2026
+
         try {
             Database database = new Database()
             CandidateService candidateService = new CandidateService(database)
