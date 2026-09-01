@@ -2,6 +2,8 @@
 
 O **Linketinder** é uma aplicação de terminal desenvolvida em Groovy para conectar candidatos a vagas de emprego oferecidas por empresas, simplificando o processo de recrutamento através do alinhamento de competências técnicas.
 
+Desenvolvido por Maria Julia Sales
+
 ---
 
 ## Tecnologias e Conceitos Utilizados
