@@ -21,8 +21,8 @@ class CandidateService {
         }
 
     List<Candidate> getAllCandidates() {
-        database.getCandidates().each {it::viewProfileAnonymous()
-        }
+        database.getCandidates()
+
     }
 
     Candidate getCandidateById(int id) {
