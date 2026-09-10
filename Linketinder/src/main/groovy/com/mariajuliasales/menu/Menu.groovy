@@ -1,6 +1,7 @@
 package com.mariajuliasales.menu
 
 import com.mariajuliasales.dto.request.CandidateRequest
+import com.mariajuliasales.dto.response.CandidateAnonymousResponse
 import com.mariajuliasales.mapper.CandidateMapper
 import com.mariajuliasales.model.Competence
 import com.mariajuliasales.service.CandidateService
@@ -33,7 +34,9 @@ class Menu {
 
             switch (choice) {
                 case 1:
-                    candidateService.getAllCandidates()
+                    List<CandidateAnonymousResponse> candidates = candidateService.getAllCandidates()
+                            ?.collect { CandidateMapper.toCandidateAnonymousResponse(it) } ?: []
+                    candidates.each { println it }
                     break
 
                 case 2:
