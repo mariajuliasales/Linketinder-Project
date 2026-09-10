@@ -1,7 +1,6 @@
 package com.mariajuliasales.service
 
 import com.mariajuliasales.model.Candidate
-import com.mariajuliasales.model.Competence
 import com.mariajuliasales.repository.Database
 import com.mariajuliasales.util.ValidateUtil
 
@@ -13,14 +12,13 @@ class CandidateService {
         this.database = database
     }
 
-    Candidate create(int id, String name, String email, String state, String cep, String description, List<Competence> competences, String cpf, int age) {
-        if (ValidateUtil.isValidCpf(cpf) && ValidateUtil.isValidEmail(email)) {
-            Candidate candidate = new Candidate(id, name, email, state, cep, description, competences, cpf, age)
-            database.createCandidate(candidate)
-        } else {
+    Candidate create(Candidate candidate) {
+        if (!ValidateUtil.isValidCpf(candidate.getCpf()) || !ValidateUtil.isValidEmail(candidate.getEmail())) {
             throw new IllegalArgumentException("Invalid candidate data")
         }
-    }
+
+        database.createCandidate(candidate)
+        }
 
     List<Candidate> getAllCandidates() {
         database.getCandidates().each {it::viewProfileAnonymous()
