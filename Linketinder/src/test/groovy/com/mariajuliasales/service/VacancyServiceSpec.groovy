@@ -129,4 +129,52 @@ class VacancyServiceSpec extends Specification {
 
     }
 
+    def "get vacancy by id should return the correct vacancy"() {
+        given:
+        Vacancy vacancy = new Vacancy(id, title, description, competences, enterprise)
+
+        when:
+        def result = vacancyService.findById(vacancy.id)
+
+        then:
+        1 * database.findVacancyById(vacancy.id) >> vacancy
+        result == vacancy
+
+        where:
+        id | title    | description           | competences
+        1  | "Vaga 1" | "Descrição da vaga 1" | [Competence.JAVASCRIPT]
+        2  | "Vaga 2" | "Descrição da vaga 2" | [Competence.SQL, Competence.GROOVY]
+        3  | "Vaga 3" | "Descrição da vaga 3" | [Competence.JAVA, Competence.PYTHON]
+
+    }
+
+    def "get vacancy by id should throw exception for invalid id"() {
+        when:
+        vacancyService.findById(invalidId)
+
+        then:
+        def exception = thrown(IllegalArgumentException)
+        exception.message == expectedMessage
+        0 * database.findVacancyById(_)
+
+        where:
+        invalidId | expectedMessage
+        -1        | "The job opening ID must be a positive integer."
+        0         | "The job opening ID must be a positive integer."
+    }
+
+    def "get vacancy by id should throw exception when vacancy not found"() {
+        given:
+        int nonExistentId = 999
+
+        when:
+        vacancyService.findById(nonExistentId)
+
+        then:
+        def exception = thrown(IllegalArgumentException)
+        exception.message == "No job opening found with the provided ID."
+        1 * database.findVacancyById(nonExistentId) >> null
+    }
+
+
 }

@@ -90,6 +90,10 @@ class Database {
         vacancies
     }
 
+    Vacancy findVacancyById(int id) {
+        vacancies.find { it.id == id }
+    }
+
     // ----- Initial data
 
     private void initializeCandidateData() {

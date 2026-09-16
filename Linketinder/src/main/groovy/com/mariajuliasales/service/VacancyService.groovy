@@ -34,4 +34,18 @@ class VacancyService {
         dataBase.getVacancies()
     }
 
+    Vacancy findById(int id) {
+        if (id <= 0) {
+            throw new IllegalArgumentException("The job opening ID must be a positive integer.")
+        }
+
+        Vacancy vacancy = dataBase.findVacancyById(id)
+
+        if (!vacancy) {
+            throw new IllegalArgumentException("No job opening found with the provided ID.")
+        }
+
+        vacancy
+    }
+
 }
