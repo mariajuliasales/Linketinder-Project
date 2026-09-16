@@ -17,8 +17,12 @@ class CandidateService {
             throw new IllegalArgumentException("Invalid candidate data")
         }
 
-        if (!ValidateUtil.isValidCpf(candidate.getCpf()) || !ValidateUtil.isValidEmail(candidate.getEmail())) {
-            throw new IllegalArgumentException("Invalid candidate data")
+        if (!ValidateUtil.isValidCpf(candidate.cpf)){
+            throw new IllegalArgumentException("Invalid candidate cpf")
+        }
+
+        if (!ValidateUtil.isValidEmail(candidate.email)) {
+            throw new IllegalArgumentException("Invalid candidate email")
         }
 
         database.createCandidate(candidate)

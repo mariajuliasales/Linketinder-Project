@@ -14,7 +14,7 @@ class CandidateServiceSpec extends Specification {
     def "create candidate with valid data"() {
         given:
         Candidate candidate = new Candidate(1, "João", "joao@email.com", "SP", "12345-678", "Desenvolvedor Java",
-                [Competence.JAVASCRIPT], "123.456.789-00", 30)
+                [Competence.JAVASCRIPT], "529.982.247-25", 30)
 
         when:
         Candidate createdCandidate = candidateService.create(candidate)
@@ -35,9 +35,9 @@ class CandidateServiceSpec extends Specification {
     }
 
     @Unroll
-    def "create candidate with invalid cpf or email should fail"() {
+    def "create candidate with invalid cpf should fail"() {
         given:
-        Candidate candidate = new Candidate(1, "João", email, "SP", "12345-678", "Desenvolvedor Java",
+        Candidate candidate = new Candidate(1, "João", "joao@email.com", "SP", "12345-678", "Desenvolvedor Java",
                 [Competence.JAVASCRIPT], cpf, 30)
 
         when:
@@ -45,14 +45,30 @@ class CandidateServiceSpec extends Specification {
 
         then:
         IllegalArgumentException ex = thrown()
-        ex.message == "Invalid candidate data"
+        ex.message == "Invalid candidate cpf"
         0 * database.createCandidate(_)
 
         where:
-        cpf                | email
-        "000.000.000-0"   | "joao@email.com"
-        "123.456.789-00"  | "email_invalid"
-        "cpf_invalid"    | "email_invalid"
+        cpf << ["invalid", "12345678900", "123.456.789-00", "cpf_invalid", "000.000.000-00"]
+    }
+
+    @Unroll
+    def "create candidate with invalid email should fail"() {
+        given:
+        Candidate candidate = new Candidate(1, "João", email, "SP", "12345-678", "Desenvolvedor Java",
+                [Competence.JAVASCRIPT], "529.982.247-25", 30)
+
+        when:
+        candidateService.create(candidate)
+
+        then:
+        IllegalArgumentException ex = thrown()
+        ex.message == "Invalid candidate email"
+        0 * database.createCandidate(_)
+
+        where:
+        email << ["invalid", "joaoemail.com", "joao@.com", "joao@email", "joao@email.", "529.982.247-25"]
+
     }
 
     def "get all candidates should return list from database"() {
