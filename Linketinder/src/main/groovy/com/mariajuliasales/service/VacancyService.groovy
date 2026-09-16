@@ -29,4 +29,9 @@ class VacancyService {
         dataBase.createVacancy(vacancy)
     }
 
+    List<Vacancy> findAll() {
+
+        dataBase.getVacancies()
+    }
+
 }

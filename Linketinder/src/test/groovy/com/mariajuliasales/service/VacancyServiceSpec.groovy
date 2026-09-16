@@ -10,11 +10,10 @@ class VacancyServiceSpec extends Specification {
 
     Database database = Mock(Database)
     VacancyService vacancyService = new VacancyService(database)
+    Enterprise enterprise = new Enterprise(1, "TechSolutions Brasil", "contato@techsolutions.com.br", "SP", "01310000", "Empresa especializada em desenvolvimento de software sob medida", [Competence.JAVA, Competence.SPRING_FRAMEWORK], "11222333000181", "Brasil")
 
     def "create vacancy valid"() {
         given:
-        Enterprise enterprise = new Enterprise(1, "TechSolutions Brasil", "contato@techsolutions.com.br", "SP", "01310000", "Empresa especializada em desenvolvimento de software sob medida", [Competence.JAVA, Competence.SPRING_FRAMEWORK], "11222333000181", "Brasil")
-
         Vacancy vacancy = new Vacancy(id, title, description, competences, enterprise)
 
         when:
@@ -53,7 +52,6 @@ class VacancyServiceSpec extends Specification {
 
     def "create vacancy with null title should fail"() {
         given:
-        Enterprise enterprise = new Enterprise(1, "TechSolutions Brasil", "contato@techsolutions.com.br", "SP", "01310000", "Empresa especializada em desenvolvimento de software sob medida", [Competence.JAVA, Competence.SPRING_FRAMEWORK], "11222333000181", "Brasil")
         Vacancy vacancy = new Vacancy(id, title, description, competences, enterprise)
 
         when:
@@ -76,7 +74,6 @@ class VacancyServiceSpec extends Specification {
 
     def "create vacancy with invalid competences should fail"() {
         given:
-        Enterprise enterprise = new Enterprise(1, "TechSolutions Brasil", "contato@techsolutions.com.br", "SP", "01310000", "Empresa especializada em desenvolvimento de software sob medida", [Competence.JAVA, Competence.SPRING_FRAMEWORK], "11222333000181", "Brasil")
         Vacancy vacancy = new Vacancy(id, title, description, competences, enterprise)
 
 
@@ -98,4 +95,38 @@ class VacancyServiceSpec extends Specification {
         3  | "Vaga 3" | "Descrição da vaga 3" | ["    "]
 
     }
+
+    def "get all vacancies should return list of vacancies"() {
+        given:
+        Vacancy vacancy = new Vacancy(id, title, description, competences, enterprise)
+
+        when:
+        vacancyService.create(vacancy)
+        def result = vacancyService.findAll()
+
+        then:
+        1 * database.getVacancies() >> [vacancy]
+        result == [vacancy]
+
+        where:
+        id | title    | description           | competences
+        1  | "Vaga 1" | "Descrição da vaga 1" | [Competence.JAVASCRIPT]
+        2  | "Vaga 2" | "Descrição da vaga 2" | [Competence.SQL, Competence.GROOVY]
+        3  | "Vaga 3" | "Descrição da vaga 3" | [Competence.JAVA, Competence.PYTHON]
+
+    }
+
+    def "get all vacancies should return empty list when no vacancies exist"() {
+        when:
+        def result = vacancyService.findAll()
+
+        then:
+        1 * database.getVacancies() >> []
+
+        and:
+        result != null
+        result.isEmpty()
+
+    }
+
 }
