@@ -1,5 +1,8 @@
 package com.mariajuliasales.menu
 
+import com.mariajuliasales.dto.request.CandidateRequest
+import com.mariajuliasales.dto.response.CandidateAnonymousResponse
+import com.mariajuliasales.mapper.CandidateMapper
 import com.mariajuliasales.model.Competence
 import com.mariajuliasales.service.CandidateService
 import com.mariajuliasales.service.EnterpriseService
@@ -31,7 +34,9 @@ class Menu {
 
             switch (choice) {
                 case 1:
-                    candidateService.getAllCandidates()
+                    List<CandidateAnonymousResponse> candidates = candidateService.getAllCandidates()
+                            ?.collect { CandidateMapper.toCandidateAnonymousResponse(it) } ?: []
+                    candidates.each { println it }
                     break
 
                 case 2:
@@ -56,13 +61,18 @@ class Menu {
                     String cpf = scanner.nextLine()
                     println "Digite a idade do candidato:"
                     String ageInput = scanner.nextLine()
-                    println "Digite as competências do candidato (separadas por vírgula):"
-                    String competencesInput = scanner.nextLine()
                     int age = ageInput.trim().isInteger() ? ageInput.trim().toInteger() : 0
 
+                    println "Digite as competências do candidato (separadas por vírgula):"
+                    String competencesInput = scanner.nextLine()
+
                     List<Competence> competences = parseCompetences(competencesInput)
+
+                    CandidateRequest candidateRequest = new CandidateRequest(10, name, email, state, cep, description, competences, cpf, age)
+
+
                     try{
-                        candidateService.create(0, name, email, state, cep, description, competences, cpf, age)
+                        candidateService.create(CandidateMapper.toCandidate(candidateRequest))
 
                     } catch(Exception e) {
                             println "Erro ao criar candidato: ${e.message}"
@@ -102,7 +112,6 @@ class Menu {
                     try {
                         enterpriseService.create(0, name, email, state, cep, description, competences, cnpj, country)
                     } catch(Exception e) {
-                        println "algum erro ocorreu ao criar a empresa"
                         println "Erro ao criar empresa: ${e.message}"
                         break
                     }
