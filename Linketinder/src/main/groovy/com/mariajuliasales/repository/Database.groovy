@@ -3,19 +3,23 @@ package com.mariajuliasales.repository
 import com.mariajuliasales.model.Candidate
 import com.mariajuliasales.model.Competence
 import com.mariajuliasales.model.Enterprise
+import com.mariajuliasales.model.Vacancy
 
 class Database {
 
     private final List<Candidate> candidates = []
     private final List<Enterprise> enterprises = []
+    private final List<Vacancy> vacancies = []
 
     private int candidateIdCounter = 1
     private int enterpriseIdCounter = 1
+    private int vacancyIdCounter = 1
 
 
     Database() {
         initializeCandidateData()
         initializeEnterpriseData()
+        initializeVacancyData()
     }
 
     // ----- Candidate Methods
@@ -49,7 +53,7 @@ class Database {
     Enterprise createEnterprise(Enterprise enterprise) {
         enterprise.id = generateIdEnterprise()
         enterprises << enterprise
-        enterprises
+        enterprise
     }
 
     Enterprise findEnterpriseById(int id) {
@@ -64,6 +68,30 @@ class Database {
     private int generateIdEnterprise() {
         enterpriseIdCounter++
 
+    }
+
+    private int generateIdVacancy() {
+        vacancyIdCounter++
+
+    }
+
+    // ----- Vacancy Methods
+
+    Vacancy createVacancy(Vacancy vacancy) {
+        vacancy.id = generateIdVacancy()
+        vacancies << vacancy
+        vacancy
+    }
+
+    List<Vacancy> getVacancies() {
+        if (vacancies.isEmpty()) {
+            println "Vacancy not found"
+        }
+        vacancies
+    }
+
+    Vacancy findVacancyById(int id) {
+        vacancies.find { it.id == id }
     }
 
     // ----- Initial data
@@ -108,6 +136,33 @@ class Database {
 
         enterprises << new Enterprise(generateIdEnterprise(), "Nexus Software House", "vagas@nexussoftware.com.br", "RS",
                 "90010000", "Desenvolvimento de produtos digitais de alta performance e SaaS", [Competence.JAVA, Competence.SPRING_FRAMEWORK], "66777888000136", "Brasil")
+
+    }
+
+    private void initializeVacancyData() {
+        vacancies << new Vacancy(generateIdVacancy(), "Desenvolvedor Full Stack Java/Spring",
+                "Desenvolvimento ponta a ponta de produtos SaaS de alta escala.",
+                [Competence.JAVA, Competence.SPRING_FRAMEWORK], enterprises[0])
+
+        vacancies << new Vacancy(generateIdVacancy(), "Desenvolvedor Backend Java Senior",
+                "Atuar na construção e manutenção de APIs RESTful usando Spring Boot e microsserviços.",
+                [Competence.JAVA, Competence.SPRING_FRAMEWORK], enterprises[1])
+
+        vacancies << new Vacancy(generateIdVacancy(), "Engenheiro de Software Groovy",
+                "Desenvolvimento de aplicações corporativas de alta performance e automação.",
+                [Competence.GROOVY, Competence.DOCKER], enterprises[2])
+
+        vacancies << new Vacancy(generateIdVacancy(), "Cientista de Dados",
+                "Criação de modelos preditivos, pipelines de dados e consultas SQL complexas.",
+                [Competence.PYTHON, Competence.SQL], enterprises[3])
+
+        vacancies << new Vacancy(generateIdVacancy(), "Especialista Cloud & DevOps",
+                "Gerenciamento de infraestrutura distribuída em nuvem e conteinerização de serviços.",
+                [Competence.JAVA, Competence.DOCKER], enterprises[4])
+
+        vacancies << new Vacancy(generateIdVacancy(), "Desenvolvedor Frontend React",
+                "Criação de interfaces web modernas, responsivas e integradas a serviços REST.",
+                [Competence.REACT, Competence.JAVASCRIPT], enterprises[5])
 
     }
 
