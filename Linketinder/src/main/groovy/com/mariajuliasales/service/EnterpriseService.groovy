@@ -13,17 +13,20 @@ class EnterpriseService {
         this.database = database
     }
 
-    Enterprise create(int id, String name, String email, String state, String cep, String description, List<Competence> competences, String cnpj, String country) {
+    Enterprise create(Enterprise enterprise) {
 
-        if (!ValidateUtil.isValidCnpj(cnpj)) {
-            throw new IllegalArgumentException("CNPJ inválido: ${cnpj}")
+        if (enterprise == null) {
+            throw new IllegalArgumentException("Invalid enterprise data")
         }
 
-        if (!ValidateUtil.isValidEmail(email)) {
-            throw new IllegalArgumentException("E-mail inválido: ${email}")
+        if (!ValidateUtil.isValidCnpj(enterprise.cnpj)) {
+            throw new IllegalArgumentException("Invalid enterprise cnpj")
         }
 
-        Enterprise enterprise = new Enterprise(id, name, email, state, cep, description, competences, cnpj, country)
+        if (!ValidateUtil.isValidEmail(enterprise.email)) {
+            throw new IllegalArgumentException("Invalid enterprise email")
+        }
+
         return database.createEnterprise(enterprise)
     }
 
@@ -32,7 +35,7 @@ class EnterpriseService {
     }
 
     List<Enterprise> getAllEnterprises() {
-        database.getEnterprises().each {it::viewProfileAnonymous()}
+        database.getEnterprises().each { it::viewProfileAnonymous() }
 
     }
 
