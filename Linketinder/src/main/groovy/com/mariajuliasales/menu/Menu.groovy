@@ -118,8 +118,10 @@ class Menu {
 
                     List<Competence> competences = parseCompetences(competencesInput)
 
+                    Enterprise enterprise = new Enterprise(0, name, email, state, cep, description, competences, cnpj, country)
+
                     try {
-                        enterpriseService.create(0, name, email, state, cep, description, competences, cnpj, country)
+                        enterpriseService.create(enterprise)
                     } catch(Exception e) {
                         println "Erro ao criar empresa: ${e.message}"
                         break
