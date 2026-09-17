@@ -4,8 +4,11 @@ import com.mariajuliasales.dto.request.CandidateRequest
 import com.mariajuliasales.dto.response.CandidateAnonymousResponse
 import com.mariajuliasales.mapper.CandidateMapper
 import com.mariajuliasales.model.Competence
+import com.mariajuliasales.model.Enterprise
+import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.service.CandidateService
 import com.mariajuliasales.service.EnterpriseService
+import com.mariajuliasales.service.VacancyService
 
 class Menu {
 
@@ -13,11 +16,12 @@ class Menu {
 
     final CandidateService candidateService
     final EnterpriseService enterpriseService
+    final VacancyService vacancyService
 
-
-    Menu(CandidateService candidateService, EnterpriseService enterpriseService) {
+    Menu(CandidateService candidateService, EnterpriseService enterpriseService, VacancyService vacancyService) {
         this.candidateService = candidateService
         this.enterpriseService = enterpriseService
+        this.vacancyService = vacancyService
     }
 
     def init() {
@@ -45,6 +49,11 @@ class Menu {
                     break
 
                 case 3:
+                    println "Listando todas as vagas..."
+                    vacancyService.findAll().each {println it.viewVacancyAnonymous()}
+                    break
+
+                case 4:
                     scanner.nextLine()
                     println "Criando novo candidato..."
                     println "Digite o nome do candidato:"
@@ -80,7 +89,7 @@ class Menu {
                         }
                     println "Candidato criado com sucesso!"
                     break
-                case 4:
+                case 5:
                     scanner.nextLine()
                     println "Criando nova empresa..."
                     println "Digite o nome da empresa:"
@@ -109,8 +118,10 @@ class Menu {
 
                     List<Competence> competences = parseCompetences(competencesInput)
 
+                    Enterprise enterprise = new Enterprise(0, name, email, state, cep, description, competences, cnpj, country)
+
                     try {
-                        enterpriseService.create(0, name, email, state, cep, description, competences, cnpj, country)
+                        enterpriseService.create(enterprise)
                     } catch(Exception e) {
                         println "Erro ao criar empresa: ${e.message}"
                         break
@@ -118,10 +129,42 @@ class Menu {
 
                     println "Empresa cadastrada com sucesso!"
                     break
-                case 5:
+
+                case 6:
+                    scanner.nextLine()
+                    println "Criando nova vaga..."
+                    println "Digite o título da vaga:"
+                    String title = scanner.nextLine()
+
+                    println "Digite a descrição da vaga:"
+                    String description = scanner.nextLine()
+
+                    println "Digite as competências requeridas (separadas por vírgula):"
+                    String competencesInput = scanner.nextLine()
+
+                    List<Competence> competences = parseCompetences(competencesInput)
+
+                    println "Digite o ID da empresa associada à vaga:"
+                    int enterpriseId = scanner.nextInt()
+                    Enterprise enterprise = enterpriseService.getEnterpriseById(enterpriseId)
+                    scanner.nextLine()
+
+                    Vacancy vacancy = new Vacancy(0, title, description, competences, enterprise)
+
+                    try {
+                        vacancyService.create(vacancy)
+                        println "Vaga criada com sucesso!"
+                    } catch(Exception e) {
+                        println "Erro ao criar vaga: ${e.message}"
+                        break
+                    }
+                    break
+
+                case 7:
                     println "Saindo do programa..."
                     opc = -1
                     break
+
                 default:
                     println "Opção inválida. Por favor, tente novamente."
             }
