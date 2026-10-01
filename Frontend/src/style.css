@@ -1,0 +1,44 @@
+body {
+  min-height: 100vh;
+  background-color: var(--bs-tertiary-bg);
+}
+
+.hero {
+  background: linear-gradient(135deg, var(--bs-primary), #6f42c1);
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.hover-card {
+  position: fixed;
+  z-index: 1080;
+  max-width: 320px;
+  pointer-events: none;
+}
+
+[aria-describedby="hover-card"] {
+  cursor: help;
+}
+
+.chart-text {
+  fill: var(--bs-body-color);
+}
+
+.chart-bar {
+  fill: var(--bs-primary);
+}
+
+.chart-row:hover .chart-bar,
+.chart-row:focus .chart-bar {
+  fill: var(--bs-primary-text-emphasis);
+}
+
+.chart-row:focus {
+  outline: none;
+}
