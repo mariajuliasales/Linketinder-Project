@@ -1,0 +1,218 @@
+Project linketinder {
+  database_type: 'PostgreSQL'
+}
+
+Enum vacancy_status {
+  OPEN 
+  PAUSED 
+  CLOSED 
+}
+
+// ---------------------------------------------------------------------------
+// Endereço
+
+Table address {
+  id           integer      [pk, increment]
+  cep          char(8)      
+  street       varchar(150)
+  number       varchar(10)
+  complement   varchar(100)
+  neighborhood varchar(100)
+  city         varchar(100) [not null]
+  state        char(2)      [not null, note: 'UF (SP, MG, ...)']
+  country      varchar(60)  [not null, default: 'Brasil']
+
+  indexes {
+    (state, city)
+  }
+
+  Note: '''
+  Endereço normalizado, usado por person (candidato/empresa) e vaga.
+  Pode ser compartilhado (ex.: a vaga usa o endereço da sede da empresa). Por isso, ao
+  alterar o endereço de um registro, o serviço cria um endereço novo em vez de editar o
+  existente, para não mudar o endereço dos outros registros que o usam.
+  Para a vaga, basta cidade/UF; rua e número ficam nulos.
+  Nunca é exposto na listagem anônima (CEP identifica a pessoa); da vaga, só cidade/UF.
+  '''
+}
+
+// ---------------------------------------------------------------------------
+// Pessoas
+
+Enum person_type {
+  CANDIDATE
+  ENTERPRISE
+}
+
+Table person {
+  id            integer      [pk, increment]
+  type          person_type  [not null]
+  name          varchar(150) [not null]
+  email         varchar(150) [not null, unique]
+  description   text        
+  password_hash varchar(255) [not null]
+  address_id    integer      [not null]
+  created_at    timestamp    [not null, default: `now()`]
+
+  indexes {
+    (id, type) [unique]
+  }
+}
+
+Table candidate {
+  id          integer      [pk, increment]
+  person_id   integer      [not null, unique]
+  person_type person_type  [not null, default: 'CANDIDATE']
+  cpf         char(11)     [not null, unique]
+  birth_date  date         [not null]
+  training    varchar(150) [not null]
+
+  checks {
+    `person_type = 'CANDIDATE'` [name: 'candidate_person_type_check']
+  }
+
+}
+
+Table enterprise {
+  id          integer     [pk, increment]
+  person_id   integer     [not null, unique]
+  person_type person_type [not null, default: 'ENTERPRISE']
+  cnpj        char(14)    [not null, unique]
+
+  checks {
+    `person_type = 'ENTERPRISE'` [name: 'enterprise_person_type_check']
+  }
+
+}
+
+
+// ---------------------------------------------------------------------------
+// Vagas e competências
+
+Table vacancy {
+  id            integer        [pk, increment]
+  enterprise_id integer        [not null]
+  title         varchar(150)   [not null]
+  description   text           [not null]
+  status        vacancy_status [not null, default: 'OPEN']
+  address_id    integer        [not null]
+  created_at    timestamp      [not null, default: `now()`]
+
+  indexes {
+    enterprise_id
+    status
+  }
+
+}
+
+Table competence {
+  id   integer     [pk, increment]
+  name varchar(50) [not null, unique, note: 'Python, Java, Spring Framework, Angular, Groovy, JavaScript, TypeScript, SQL, Docker, Kafka, React']
+
+}
+
+Table candidate_competence {
+  candidate_id  integer [not null]
+  competence_id integer [not null]
+
+  indexes {
+    (candidate_id, competence_id) [pk]
+    competence_id
+  }
+}
+
+Table enterprise_competence {
+  enterprise_id integer [not null]
+  competence_id integer [not null]
+
+  indexes {
+    (enterprise_id, competence_id) [pk]
+    competence_id
+
+  }
+
+}
+
+
+Table vacancy_competence {
+  vacancy_id    integer [not null]
+  competence_id integer [not null]
+
+  indexes {
+    (vacancy_id, competence_id) [pk]
+    competence_id
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Curtidas e match
+
+Table candidate_like {
+  candidate_id integer   [not null]
+  vacancy_id   integer   [not null]
+  created_at   timestamp [not null, default: `now()`]
+
+  indexes {
+    (candidate_id, vacancy_id) [pk, note: 'Uma curtida por vaga']
+    vacancy_id
+  }
+
+}
+
+
+Table enterprise_like {
+  enterprise_id integer   [not null]
+  candidate_id  integer   [not null]
+  created_at    timestamp [not null, default: `now()`]
+
+  indexes {
+    (enterprise_id, candidate_id) [pk, note: 'Uma curtida por candidato']
+    candidate_id
+  }
+
+
+}
+
+Table vacancy_match {
+  id           integer   [pk, increment]
+  candidate_id integer   [not null]
+  vacancy_id   integer   [not null]
+  matched_at   timestamp [not null, default: `now()`]
+
+  indexes {
+    (candidate_id, vacancy_id) [unique, note: 'Um match por candidato/vaga']
+    vacancy_id
+  }
+
+}
+
+
+Ref: candidate.(person_id, person_type) > person.(id, type) [delete: cascade]
+Ref: enterprise.(person_id, person_type) > person.(id, type) [delete: cascade]
+
+Ref: person.address_id > address.id [delete: restrict]
+
+
+
+Ref: vacancy.enterprise_id > enterprise.id [delete: cascade]
+Ref: vacancy.address_id > address.id [delete: restrict]
+
+
+
+Ref: candidate_competence.candidate_id > candidate.id [delete: cascade]
+Ref: candidate_competence.competence_id > competence.id [delete: restrict]
+Ref: enterprise_competence.enterprise_id > enterprise.id [delete: cascade]
+Ref: enterprise_competence.competence_id > competence.id [delete: restrict]
+Ref: vacancy_competence.vacancy_id > vacancy.id [delete: cascade]
+Ref: vacancy_competence.competence_id > competence.id [delete: restrict]
+
+// Curtidas
+Ref: candidate_like.candidate_id > candidate.id [delete: cascade]
+Ref: candidate_like.vacancy_id > vacancy.id [delete: cascade]
+Ref: enterprise_like.enterprise_id > enterprise.id [delete: cascade]
+Ref: enterprise_like.candidate_id > candidate.id [delete: cascade]
+
+// Match depende da curtida do candidato na vaga
+Ref: vacancy_match.(candidate_id, vacancy_id) > candidate_like.(candidate_id, vacancy_id) [delete: cascade]
+Ref: vacancy_match.candidate_id > candidate.id [delete: cascade]
+Ref: vacancy_match.vacancy_id > vacancy.id [delete: cascade]
