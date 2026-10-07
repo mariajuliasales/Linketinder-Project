@@ -5,12 +5,13 @@ O **Linketinder** é um "LinkedIn + Tinder" para vagas de emprego: conecta candi
 **competências técnicas**, de forma **anônima**. O candidato vê as vagas sem saber qual empresa as publicou. A empresa vê os candidatos sem nome nem dados pessoais, só formação, descrição e competências.
 A identidade dos dois lados só seria revelada depois de um *match*.
 
-O projeto tem duas partes independentes:
+O projeto tem três partes:
 
 | Parte | Pasta | O que é |
 |-------|-------|---------|
 | **Backend** | [`Linketinder/`](Linketinder/) | Aplicação de terminal em **Groovy**, com menu interativo, regras de negócio, validações e testes unitários |
 | **Frontend** | [`Frontend/`](Frontend/) | Aplicação web em **TypeScript + Vite + Bootstrap**, com cadastro, login, listagens anônimas e gráfico de competências |
+| **Banco de dados** | [`Database/`](Database/) | Modelagem (DER) e SQL do banco **PostgreSQL**: tabelas, curtidas, match e consultas de teste. |
 
 > Nesta etapa, frontend e backend ainda não se comunicam: cada um tem os próprios dados de exemplo.
 
@@ -36,6 +37,13 @@ O projeto tem duas partes independentes:
   - [Persistência](#persistência)
   - [Estrutura do frontend](#estrutura-do-frontend)
   - [Como executar o frontend](#como-executar-o-frontend)
+- [Banco de dados (PostgreSQL)](#banco-de-dados-postgresql)
+  - [Tecnologias](#tecnologias-2)
+  - [DER](#der)
+  - [Lógica do match](#lógica-do-match)
+  - [Regras do banco](#regras-do-banco)
+  - [Estrutura do banco](#estrutura-do-banco)
+  - [Como executar o banco](#como-executar-o-banco)
 
 ---
 
@@ -281,6 +289,72 @@ cd Linketinder-Project/Frontend
 
 npm install       # instala as dependências
 npm run dev       # servidor de desenvolvimento em http://localhost:5173
+```
+
+---
+
+## Banco de dados (PostgreSQL)
+
+Modelagem e SQL do banco do Linketinder. Nesta etapa o banco é independente: tem os próprios dados de exemplo e é testado
+com consultas SQL.
+
+### Tecnologias
+
+* **Banco:** PostgreSQL 18
+* **Modelagem:** DBML, com o diagrama gerado no [dbdiagram.io](https://dbdiagram.io)
+* **Senhas:** extensão `pgcrypto` (hash bcrypt)
+
+### DER
+
+![DER do Linketinder](Database/DER-Linketinder.png)
+
+O modelo completo está em [`Database/linketinder.dbml`](Database/linketinder.dbml).
+
+
+### Lógica do match
+
+1. O candidato vê as vagas sem os dados da empresa e curte uma vaga (`candidate_like`).
+2. A empresa vê os candidatos sem nome nem dados pessoais e curte um candidato (`enterprise_like`).
+3. Há match quando o candidato curtiu a vaga e a empresa dona dessa vaga curtiu o candidato.
+   A ordem das curtidas não importa. O match é gravado em `vacancy_match`.
+4. Se o candidato remover a curtida, o match é apagado junto.
+5. Só depois do match os dados de identificação (nome, e-mail) são mostrados para o outro lado.
+
+### Regras do banco
+
+| Regra | Como |
+|-------|------|
+| Uma pessoa é candidato ou empresa| FK composta `(person_id, person_type)` → `person(id, type)` |
+| E-mail, CPF, CNPJ e nome da competência não se repetem | `UNIQUE` |
+| Uma curtida por candidato/vaga e por empresa/candidato | Chave primária composta |
+| Não existe match sem a curtida do candidato | FK de `vacancy_match` para `candidate_like` |
+| Excluir uma pessoa apaga em cascata o candidato/empresa, as vagas, as curtidas e os matches | `ON DELETE CASCADE` |
+| Endereço e competência em uso não podem ser apagados | `ON DELETE RESTRICT` |
+| A senha nunca é gravada em texto | Hash bcrypt com `crypt()` |
+
+### Estrutura do banco
+
+```text
+Database/
+├── linketinder.dbml       # modelo do banco (DER em DBML)
+├── DER-Linketinder.png    # imagem do DER
+├── schema.sql             # criação das tabelas, constraints e índices
+├── seed.sql               # dados de exemplo
+├── queries.sql            # consultas que testam as relações, as curtidas e o match
+```
+
+### Como executar o banco
+
+**Pré-requisito:** PostgreSQL instalado e rodando (porta padrão 5432).
+
+```bash
+cd Linketinder-Project/Database
+export PGPASSWORD=postgres   # senha do usuário postgres
+
+createdb -h localhost -U postgres linketinder                          # cria o banco (só na primeira vez)
+psql -h localhost -U postgres -d linketinder -f schema.sql             # cria as tabelas
+psql -h localhost -U postgres -d linketinder -f seed.sql               # insere os dados de exemplo
+psql -h localhost -U postgres -d linketinder -P pager=off -f queries.sql  # roda as consultas de teste
 ```
 
 ---
