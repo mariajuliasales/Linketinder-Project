@@ -1,20 +1,35 @@
 package com.mariajuliasales.model
 
-class Enterprise extends PersonAbstract{
+class Enterprise extends PersonAbstract {
 
     String cnpj
-    String country
+    List<Vacancy> vacancies = []
 
-    Enterprise(int id, String name, String email, String state, String cep, String description, List<Competence> competences, String cnpj, String country) {
-        super(id, name, email, state, cep, description, competences)
-        this.cnpj = cnpj
-        this.country = country
+    void addVacancy(Vacancy vacancy) {
+        if (!vacancy || vacancies.contains(vacancy)) {
+            return
+        }
+        if (vacancy.enterprise != null && !vacancy.enterprise.is(this)) {
+            vacancy.enterprise.removeVacancy(vacancy)
+        }
+        vacancies << vacancy
+        vacancy.enterprise = this
+    }
+
+    void removeVacancy(Vacancy vacancy) {
+        if (!vacancy || !vacancies.remove(vacancy)) {
+            return
+        }
+        if (vacancy.enterprise.is(this)) {
+            vacancy.enterprise = null
+        }
     }
 
     @Override
     String viewProfileAnonymous() {
-        println "Perfil da Empresa ${id}: " +
-                "CEP: ${cep} | Estado: ${state} | Country: ${country} | Descrição da empresa: ${description} | Competences: ${competences.join(', ')}"
+        "Perfil da Empresa ${id}: " +
+                "Estado: ${address?.state} | País: ${address?.country} | Descrição da empresa: ${description} | " +
+                "Competências: ${competences.join(', ')} | Vagas: ${vacancies.size()}"
     }
 
 }

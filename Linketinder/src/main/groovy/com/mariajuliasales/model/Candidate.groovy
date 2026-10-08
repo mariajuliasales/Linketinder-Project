@@ -1,20 +1,22 @@
 package com.mariajuliasales.model
 
+import java.time.LocalDate
+import java.time.Period
+
 class Candidate extends PersonAbstract{
 
     String cpf
-    int age
+    LocalDate birthDate
+    String training
 
-    Candidate(int id, String name, String email, String state, String cep, String description, List<Competence> competences, String cpf, int age) {
-        super(id, name, email, state, cep, description, competences)
-        this.cpf = cpf
-        this.age = age
+    int getAge() {
+        birthDate ? Period.between(birthDate, LocalDate.now()).years : 0
     }
 
     @Override
     String viewProfileAnonymous() {
-        println "Perfil do Candidato ${id}: " +
-                "Estado: ${state} | CEP: ${cep} | Descrição pessoal: ${description} | Competências: ${competences.join(', ')}"
+        "Perfil do Candidato ${id}: " +
+                "Formação: ${training} | Descrição pessoal: ${description} | Competências: ${competences.join(', ')}"
     }
 
 }
