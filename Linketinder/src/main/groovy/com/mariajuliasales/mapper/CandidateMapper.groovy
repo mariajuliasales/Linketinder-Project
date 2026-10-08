@@ -14,15 +14,15 @@ class CandidateMapper {
             throw new IllegalArgumentException("CandidateRequest cannot be null")
 
         new Candidate(
-                request.id(),
-                request.name(),
-                request.email(),
-                request.state(),
-                request.cep(),
-                request.description(),
-                request.competences()?.collect { it as Competence } ?: [],
-                request.cpf(),
-                request.age()
+                name: request.name(),
+                email: request.email(),
+                password: request.password(),
+                address: request.address() ? AddressMapper.toAddress(request.address()) : null,
+                description: request.description(),
+                competences: request.competences()?.collect { new Competence(it) } ?: [],
+                cpf: request.cpf(),
+                birthDate: request.birthDate(),
+                training: request.training()
         )
     }
 
@@ -32,14 +32,15 @@ class CandidateMapper {
             throw new IllegalArgumentException("Candidate cannot be null")
 
         new CandidateResponse(
+                candidate.id,
                 candidate.name,
                 candidate.email,
-                candidate.state,
-                candidate.cep,
+                candidate.address ? AddressMapper.toAddressResponse(candidate.address) : null,
                 candidate.description,
-                candidate.competences?.collect { it as Competence } ?: [],
+                candidate.competences?.collect { it.name } ?: [],
                 candidate.cpf,
-                candidate.age
+                candidate.age,
+                candidate.training
         )
     }
 
@@ -49,10 +50,10 @@ class CandidateMapper {
             throw new IllegalArgumentException("Candidate cannot be null")
 
         new CandidateAnonymousResponse(
-                candidate.state,
-                candidate.cep,
+                candidate.id,
+                candidate.training,
                 candidate.description,
-                candidate.competences?.collect { it as Competence } ?: []
+                candidate.competences?.collect { it.name } ?: []
         )
     }
 }
