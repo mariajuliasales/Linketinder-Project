@@ -1,5 +1,7 @@
 package com.mariajuliasales.util
 
+import com.mariajuliasales.model.Address
+
 class ValidateUtil {
 
     private ValidateUtil() {
@@ -77,7 +79,27 @@ class ValidateUtil {
         }
 
     }
+    
+    static boolean isValidPassword(String password) {
+        password != null && password.length() >= 6
+    }
 
+    static boolean isValidCep(String cep) {
+        cep != null && cep ==~ /^\d{5}-?\d{3}$/
+    }
+
+    static boolean isValidState(String state) {
+        state != null && state ==~ /^[A-Za-z]{2}$/
+    }
+
+    static boolean isValidLocation(Address address) {
+        address != null && address.city?.trim() && isValidState(address.state)
+    }
+
+    // Tira a máscara, "529.982.247-25" vira "52998224725"
+    static String onlyDigits(String value) {
+        value?.replaceAll(/\D/, '')
+    }
 
     private static int calculateDigit(String base, int weight) {
         int sum = 0

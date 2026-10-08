@@ -11,14 +11,23 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.apache.groovy:groovy:5.0.8'
-    testImplementation platform('org.junit:junit-bom:6.0.0')
+    implementation 'org.apache.groovy:groovy:4.0.25'
+    implementation 'org.postgresql:postgresql:42.7.13'
+    testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    testImplementation 'org.spockframework:spock-core:2.4-groovy-5.0'
-    testImplementation 'net.bytebuddy:byte-buddy:1.14.9'
+    testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
+    testImplementation 'net.bytebuddy:byte-buddy:1.14.12'
+    testImplementation 'org.objenesis:objenesis:3.3'
 
 }
+
+java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+}
+
 
 application {
     mainClass = 'com.mariajuliasales.Main'

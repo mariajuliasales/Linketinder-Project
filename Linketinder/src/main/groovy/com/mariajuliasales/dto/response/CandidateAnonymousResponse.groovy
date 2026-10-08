@@ -1,15 +1,15 @@
 package com.mariajuliasales.dto.response
 
 record CandidateAnonymousResponse(
-        String state,
-        String cep,
+        int id,
+        String training,
         String description,
         List<String> competences
 ) {
 
     @Override
     String toString() {
-        return "Perfil do Candidato: " +
-                "CEP: ${cep} | Estado: ${state} | Descrição pessoal: ${description} | Competências: ${competences.join(', ')}"
+        return "Perfil do Candidato ${id}: " +
+                "Formação: ${training} | Descrição pessoal: ${description} | Competências: ${competences.join(', ')}"
     }
 }
