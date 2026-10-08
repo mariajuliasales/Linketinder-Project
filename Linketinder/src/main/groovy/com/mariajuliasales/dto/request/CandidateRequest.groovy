@@ -1,14 +1,17 @@
 package com.mariajuliasales.dto.request
 
+import java.time.LocalDate
+
+
 record CandidateRequest(
-        int id,
         String name,
         String email,
-        String state,
-        String cep,
+        String password,
+        AddressRequest address,
         String description,
         List<String> competences,
         String cpf,
-        int age
+        LocalDate birthDate,
+        String training
 ) {
 }

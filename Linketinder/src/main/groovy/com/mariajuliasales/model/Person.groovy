@@ -8,9 +8,9 @@ interface Person {
 
     String getEmail()
 
-    String getState()
+    String getPassword()
 
-    String getCep()
+    Address getAddress()
 
     String getDescription()
 
@@ -19,6 +19,4 @@ interface Person {
     def addCompetence(Competence competence)
 
     String viewProfileAnonymous()
-
-
 }

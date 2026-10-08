@@ -1,20 +1,46 @@
 package com.mariajuliasales.service
 
-import com.mariajuliasales.model.Competence
+import com.mariajuliasales.dao.EnterpriseDAO
 import com.mariajuliasales.model.Enterprise
-import com.mariajuliasales.repository.Database
 import com.mariajuliasales.util.ValidateUtil
 
 class EnterpriseService {
 
-    private final Database database
+    private final EnterpriseDAO enterpriseDAO
 
-    EnterpriseService(Database database) {
-        this.database = database
+    EnterpriseService(EnterpriseDAO enterpriseDAO) {
+        this.enterpriseDAO = enterpriseDAO
     }
 
     Enterprise create(Enterprise enterprise) {
+        validate(enterprise, true)
+        return enterpriseDAO.create(enterprise)
+    }
 
+    Enterprise getEnterpriseById(int id) {
+        enterpriseDAO.findById(id)
+    }
+
+    List<Enterprise> getAllEnterprises() {
+        enterpriseDAO.findAll()
+    }
+
+    Enterprise update(Enterprise enterprise) {
+        validate(enterprise, false)
+        Enterprise updated = enterpriseDAO.update(enterprise)
+        if (!updated) {
+            throw new IllegalArgumentException("Enterprise not found")
+        }
+        updated
+    }
+
+    void delete(int id) {
+        if (!enterpriseDAO.delete(id)) {
+            throw new IllegalArgumentException("Enterprise not found")
+        }
+    }
+
+    private static void validate(Enterprise enterprise, boolean passwordRequired) {
         if (enterprise == null) {
             throw new IllegalArgumentException("Invalid enterprise data")
         }
@@ -27,16 +53,25 @@ class EnterpriseService {
             throw new IllegalArgumentException("Invalid enterprise email")
         }
 
-        return database.createEnterprise(enterprise)
-    }
+        if ((passwordRequired || enterprise.password) && !ValidateUtil.isValidPassword(enterprise.password)) {
+            throw new IllegalArgumentException("Invalid enterprise password: it must have at least 6 characters")
+        }
 
-    Enterprise getEnterpriseById(int id) {
-        database.findEnterpriseById(id)
-    }
+        if (!enterprise.name?.trim()) {
+            throw new IllegalArgumentException("Invalid enterprise name")
+        }
 
-    List<Enterprise> getAllEnterprises() {
-        database.getEnterprises().each { it::viewProfileAnonymous() }
+        if (enterprise.address == null) {
+            throw new IllegalArgumentException("Invalid enterprise address")
+        }
 
+        if (!ValidateUtil.isValidCep(enterprise.address.cep)) {
+            throw new IllegalArgumentException("Invalid enterprise cep")
+        }
+
+        if (!ValidateUtil.isValidLocation(enterprise.address)) {
+            throw new IllegalArgumentException("Invalid enterprise city or state")
+        }
     }
 
 }
