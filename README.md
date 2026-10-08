@@ -13,7 +13,7 @@ O projeto tem três partes:
 | **Frontend** | [`Frontend/`](Frontend/) | Aplicação web em **TypeScript + Vite + Bootstrap**, com cadastro, login, listagens anônimas e gráfico de competências |
 | **Banco de dados** | [`Database/`](Database/) | Modelagem (DER) e SQL do banco **PostgreSQL**: tabelas, curtidas, match e consultas de teste. |
 
-> Nesta etapa, frontend e backend ainda não se comunicam: cada um tem os próprios dados de exemplo.
+> O backend salva os dados no banco PostgreSQL (JDBC). O frontend ainda não se comunica com o backend.
 
 
 ---
@@ -23,6 +23,7 @@ O projeto tem três partes:
 - [Backend (Groovy)](#backend-groovy)
   - [Tecnologias](#tecnologias)
   - [Arquitetura](#arquitetura)
+  - [Integração com o banco (JDBC)](#integração-com-o-banco-jdbc)
   - [Modelo de domínio](#modelo-de-domínio)
   - [Funcionalidades do menu](#funcionalidades-do-menu)
   - [Validações](#validações)
@@ -49,16 +50,17 @@ O projeto tem três partes:
 
 ## Backend (Groovy)
 
-Aplicação de terminal que cadastra e lista candidatos, empresas e vagas. Os dados ficam em memória
-enquanto o programa está aberto, e a aplicação já começa com 6 candidatos, 6 empresas e 6 vagas de exemplo.
+Aplicação de terminal com o CRUD de candidatos, empresas, vagas e competências. Os dados são salvos no
+banco **PostgreSQL** (pasta [`Database/`](Database/)) por meio de JDBC.
 
 ### Tecnologias
 
 * **Linguagem:** Groovy 5 (Java JDK 17+)
 * **Build:** Gradle (com Gradle Wrapper)
+* **Banco:** PostgreSQL 18, acessado por JDBC (driver `org.postgresql:postgresql`)
 * **Testes:** Spock Framework 2.4 sobre JUnit Platform
-* **Conceitos:** orientação a objetos (interface, classe abstrata e herança), camada de serviços, DTOs,
-  mappers, enums, records e expressões regulares
+* **Conceitos:** orientação a objetos (interface, classe abstrata e herança), camada de serviços, DAO, DTOs,
+  mappers, enums, records, transações e expressões regulares
 
 ### Arquitetura
 
@@ -67,76 +69,95 @@ O código é separado em camadas, cada uma com uma responsabilidade:
 | Camada | Classes | Responsabilidade |
 |--------|---------|------------------|
 | **Menu** | `Menu`, `View` | Interação com o usuário no terminal |
-| **Service** | `CandidateService`, `EnterpriseService`, `VacancyService` | Regras de negócio e validações antes de salvar |
-| **Repository** | `Database` | Repositório simulado em memória |
-| **Model** | `Person`, `PersonAbstract`, `Candidate`, `Enterprise`, `Vacancy`, `Competence`, `VacancyStatus` | Entidades do domínio |
-| **DTO** | `CandidateRequest`, `CandidateResponse`, `CandidateAnonymousResponse` | Objetos de entrada e saída de dados do candidato  |
-| **Mapper** | `CandidateMapper` | Converte entre DTOs e a entidade `Candidate` |
-| **Util** | `ValidateUtil` | Validação de CPF, CNPJ e e-mail |
+| **Service** | `CandidateService`, `EnterpriseService`, `VacancyService`, `CompetenceService` | Regras de negócio e validações antes de salvar |
+| **DAO** | `DatabaseConnection`, `CandidateDAO`, `EnterpriseDAO`, `VacancyDAO`, `CompetenceDAO`, `PersonDAO`, `AddressDAO` | Conexão com o banco e o SQL de cada CRUD |
+| **Model** | `Person`, `PersonAbstract`, `Address`, `Candidate`, `Enterprise`, `Vacancy`, `Competence`, `VacancyStatus` | Entidades do domínio |
+| **DTO** | `CandidateRequest`, `AddressRequest`, `CandidateResponse`, `CandidateAnonymousResponse`, `AddressResponse` | Objetos de entrada e saída de dados |
+| **Mapper** | `CandidateMapper`, `AddressMapper` | Converte entre DTOs e as entidades `Candidate` e `Address` |
+| **Util** | `ValidateUtil` | Validação de CPF, CNPJ, e-mail, senha, CEP e UF |
 
-O `Main` monta as dependências (`Database` → serviços → `Menu`) e inicia o menu.
+O `Main` monta as dependências (`DatabaseConnection` → DAOs → serviços → `Menu`) e inicia o menu.
+
+### Integração com o banco (JDBC)
+
+- **`DatabaseConnection`** abre as conexões com `DriverManager` e oferece dois métodos:
+  `withConnection` (abre, usa e fecha a conexão) e `withTransaction` (faz `commit` se tudo der certo e
+  `rollback` se algo falhar).
+- **Um DAO por tabela principal**, com `create`, `findAll`, `findById`, `update` e `delete`. Todo o SQL usa
+  `PreparedStatement`, que evita SQL injection.
+- **Candidato e empresa** gravam em várias tabelas (`address` → `person` → `candidate`/`enterprise` → competências)
+  dentro de **uma transação**: ou tudo é salvo, ou nada. A parte comum fica em `PersonDAO`, assim como
+  `PersonAbstract` é a parte comum dos modelos.
+- **Relação N:N com competências:** `CompetenceDAO.replaceLinks` grava as ligações em `candidate_competence`,
+  `enterprise_competence` e `vacancy_competence`. Uma competência digitada que ainda não existe é criada na hora
+  (ex.: "Ilustrador"), e "java" é reconhecida como "Java".
+- **Relação 1:N empresa → vagas:** cada `Vacancy` guarda a sua `Enterprise`, e `VacancyDAO.findByEnterprise`
+  lista as vagas de uma empresa. Excluir a empresa exclui as vagas dela (cascade no banco).
+- **Senha** gravada como hash bcrypt pelo próprio PostgreSQL (`crypt(?, gen_salt('bf'))`).
+- **Erros do banco** (e-mail/CPF/CNPJ repetido, competência em uso) viram mensagens claras no menu.
 
 ### Modelo de domínio
 
 ```text
 Person (interface)
-   └── PersonAbstract (classe abstrata: id, name, email, state, cep, description, competences)
-          ├── Candidate  (+ cpf, age)
-          └── Enterprise (+ cnpj, country)
+   └── PersonAbstract (classe abstrata: id, name, email, password, description, address, competences)
+          ├── Candidate  (+ cpf, birthDate, training; a idade é calculada)
+          └── Enterprise (+ cnpj)
 
-Vacancy (id, title, description, competences, status, enterprise)
-Competence (enum):    PYTHON, JAVA, SPRING_FRAMEWORK, ANGULAR, GROOVY, JAVASCRIPT, SQL, DOCKER, KAFKA, REACT
+Address (id, cep, street, number, complement, neighborhood, city, state, country) — endereço de pessoas e vagas
+Vacancy (id, title, description, competences, status, address, enterprise)
+Competence (classe: id, name) — lista pré-definida no banco + competências digitadas pelos usuários
 VacancyStatus (enum): OPEN, CLOSED, PAUSED
 ```
 
-Cada pessoa sabe exibir o próprio **perfil anônimo** (`viewProfileAnonymous`), e cada vaga sabe exibir
+Cada pessoa sabe exibir o próprio perfil anônimo (`viewProfileAnonymous`), e cada vaga sabe exibir
 sua versão anônima (`viewVacancyAnonymous`), sem os dados da empresa.
 
 ### Funcionalidades do menu
 
 ```text
 Bem vindo(a) ao LinkeTinder!
-1. Listar todos os candidatos.
-2. Listar todas as empresas.
-3. Listar todas as vagas.
-4. Criar um novo candidato.
-5. Criar uma nova empresa.
-6. Criar uma nova vaga.
-7. Sair do programa.
+1. Candidatos       → listar (anônimo), ver perfil completo, cadastrar, atualizar, excluir
+2. Empresas         → listar, ver dados completos, cadastrar, atualizar, excluir (com as vagas)
+3. Vagas            → listar todas, listar as de uma empresa, cadastrar, atualizar, excluir
+4. Competências     → listar, cadastrar, renomear, excluir
+0. Sair do programa.
 ```
 
-- **Listar candidatos:** mostra o perfil anônimo de cada candidato (`CandidateAnonymousResponse`: estado,
-  CEP, descrição e competências — sem nome, e-mail, CPF ou idade).
-- **Listar empresas:** mostra o perfil anônimo de cada empresa.
-- **Listar vagas:** mostra título, descrição e competências de cada vaga.
-- **Criar candidato / empresa:** pede os dados no terminal, valida e salva. As competências são digitadas
-  separadas por vírgula (ex.: `java, spring framework`). Os nomes não reconhecidos são ignorados com aviso.
-- **Criar vaga:** pede título, descrição, competências e o ID da empresa dona da vaga.
+- **Listar candidatos:** mostra só formação, descrição e competências (`CandidateAnonymousResponse`), sem nome,
+  e-mail, CPF ou endereço.
+- **Cadastrar:** pede os dados no terminal, valida e salva no banco. As competências disponíveis são mostradas, e
+  o usuário digita as suas separadas por vírgula, podendo escrever competências novas.
+- **Atualizar:** mostra o valor atual de cada campo entre colchetes; **Enter mantém o valor**. A senha só muda
+  se uma nova for digitada.
+- **Excluir competência:** o banco recusa se ela estiver em uso por algum candidato, empresa ou vaga.
 
 ### Validações
 
 | Onde | Regra |
 |------|-------|
-| `CandidateService` | Candidato não pode ser nulo; **CPF** e **e-mail** precisam ser válidos |
-| `EnterpriseService` | Empresa não pode ser nula; **CNPJ** e **e-mail** precisam ser válidos |
-| `VacancyService` | A vaga precisa de **título**, de **ao menos uma competência** válida e de uma **empresa**; a busca por ID exige ID positivo e existente |
-| `ValidateUtil` | **CPF:** formato com ou sem pontuação, rejeita dígitos todos iguais e confere os dígitos verificadores. **CNPJ:** aceita também o formato **alfanumérico** e confere os dígitos verificadores. **E-mail:** validado por expressão regular |
+| `CandidateService` | **CPF**, **e-mail**, **senha** (6+ caracteres), nome, endereço (**CEP**, cidade/**UF**), data de nascimento e formação |
+| `EnterpriseService` | **CNPJ**, **e-mail**, **senha** (6+ caracteres), nome e endereço (**CEP** e cidade/**UF**) |
+| `VacancyService` | **Título**, **ao menos uma competência**, **empresa**, descrição e endereço (cidade/**UF**); a busca por ID exige ID positivo e existente |
+| `CompetenceService` | Nome não vazio, com até 50 caracteres e que ainda não exista |
+| `ValidateUtil` | **CPF:** formato com ou sem pontuação, rejeita dígitos todos iguais e confere os dígitos verificadores. **CNPJ:** aceita também o formato **alfanumérico** e confere os dígitos verificadores. **E-mail:** expressão regular. **CEP:** 8 dígitos. **UF:** 2 letras |
 
 Quando uma regra é violada, o serviço lança `IllegalArgumentException` com uma mensagem explicando o erro,
-e o menu mostra essa mensagem sem encerrar o programa.
+e o menu mostra essa mensagem sem encerrar o programa. Na atualização, a senha é opcional.
 
 ### Testes
 
-Os serviços têm testes unitários com **Spock** (`src/test/groovy/.../service/`), incluindo testes
-parametrizados com várias entradas inválidas:
+Os serviços têm testes unitários com **Spock** (`src/test/groovy/.../service/`). Os DAOs são substituídos por
+**mocks**, então os testes rodam sem precisar do banco:
 
 | Especificação | O que testa |
 |---------------|-------------|
-| `CandidateServiceSpec` | Criação válida, candidato nulo, CPFs inválidos, e-mails inválidos, listagem e busca por ID |
-| `EnterpriseServiceSpec` | Criação válida, CNPJs inválidos, e-mails inválidos, listagem e busca por ID |
-| `VacancyServiceSpec` | Criação válida, empresa nula, título vazio, competências inválidas, listagem (com e sem vagas) e busca por ID (válido, inválido e inexistente) |
+| `CandidateServiceSpec` | Criação válida e inválida (CPF, e-mail, senha, endereço — CEP, UF, cidade —, data de nascimento, formação, nome), listagem, busca, atualização e exclusão |
+| `EnterpriseServiceSpec` | Criação válida e inválida (CNPJ, e-mail, senha, endereço — CEP, UF, cidade —, nome), listagem, busca, atualização e exclusão |
+| `VacancyServiceSpec` | Criação válida e inválida (empresa, título, competências, descrição, local), listagem, busca, vagas por empresa, atualização e exclusão |
+| `CompetenceServiceSpec` | Criação (nova, repetida e com nome inválido), listagem, busca, renomear, exclusão e igualdade sem diferenciar maiúsculas |
 
-São **49 casos de teste** no total, todos passando.
+São **96 casos de teste** no total, todos passando.
 
 ### Estrutura do backend
 
@@ -149,32 +170,45 @@ Linketinder/
     ├── main/groovy/com/mariajuliasales/
     │   ├── Main.groovy
     │   ├── menu/         Menu.groovy, View.groovy
-    │   ├── service/      CandidateService.groovy, EnterpriseService.groovy, VacancyService.groovy
-    │   ├── repository/   Database.groovy
-    │   ├── model/        Person.groovy, PersonAbstract.groovy, Candidate.groovy, Enterprise.groovy,
+    │   ├── service/      CandidateService.groovy, EnterpriseService.groovy, VacancyService.groovy,
+    │   │                 CompetenceService.groovy
+    │   ├── dao/          DatabaseConnection.groovy, CandidateDAO.groovy, EnterpriseDAO.groovy,
+    │   │                 VacancyDAO.groovy, CompetenceDAO.groovy, PersonDAO.groovy, AddressDAO.groovy
+    │   ├── model/        Person.groovy, PersonAbstract.groovy, Address.groovy, Candidate.groovy, Enterprise.groovy,
     │   │                 Vacancy.groovy, Competence.groovy, VacancyStatus.groovy
     │   ├── dto/
-    │   │   ├── request/  CandidateRequest.groovy
-    │   │   └── response/ CandidateResponse.groovy, CandidateAnonymousResponse.groovy
-    │   ├── mapper/       CandidateMapper.groovy
+    │   │   ├── request/  CandidateRequest.groovy, AddressRequest.groovy
+    │   │   └── response/ CandidateResponse.groovy, CandidateAnonymousResponse.groovy, AddressResponse.groovy
+    │   ├── mapper/       CandidateMapper.groovy, AddressMapper.groovy
     │   └── util/         ValidateUtil.groovy
     └── test/groovy/com/mariajuliasales/service/
         ├── CandidateServiceSpec.groovy
         ├── EnterpriseServiceSpec.groovy
-        └── VacancyServiceSpec.groovy
+        ├── VacancyServiceSpec.groovy
+        └── CompetenceServiceSpec.groovy
 ```
 
 ### Como executar o backend
 
-**Pré-requisito:** Java JDK 17 ou superior. Não é preciso instalar o Gradle, pois o projeto usa o Gradle Wrapper.
+**Pré-requisitos:** Java JDK 17 ou superior e o banco PostgreSQL criado e populado
+(veja [Como executar o banco](#como-executar-o-banco)). Não é preciso instalar o Gradle, pois o projeto usa o Gradle Wrapper.
 
 ```bash
 git clone https://github.com/mariajuliasales/Linketinder-Project.git
 cd Linketinder-Project/Linketinder
 
-./gradlew build   # compila e roda os testes
-./gradlew run     # abre o menu no terminal
+./gradlew build   # compila e roda os testes (não precisa do banco)
+./gradlew run     # abre o menu no terminal (precisa do banco rodando)
 ./gradlew test    # só os testes
+```
+
+Por padrão, a aplicação conecta em `jdbc:postgresql://localhost:5432/linketinder` com usuário e senha
+`postgres`. Para usar outros valores, defina as variáveis de ambiente antes do `run`:
+
+```bash
+export DB_URL=jdbc:postgresql://localhost:5432/linketinder
+export DB_USER=postgres
+export DB_PASSWORD=sua_senha
 ```
 
 No Windows, use `gradlew.bat` no lugar de `./gradlew`.
@@ -274,7 +308,7 @@ Frontend/
         ├── register.ts
         ├── login.ts
         ├── vacancies.ts
-        ├── candidates.ts     # tabela e gráfico SVG
+        ├── candidates.ts 
         └── myVacancies.ts
 ```
 
@@ -288,15 +322,15 @@ O fluxo é sempre `pages` → `services` → `storage`.
 cd Linketinder-Project/Frontend
 
 npm install       # instala as dependências
-npm run dev       # servidor de desenvolvimento em http://localhost:5173
+npm run dev       # http://localhost:5173
 ```
 
 ---
 
 ## Banco de dados (PostgreSQL)
 
-Modelagem e SQL do banco do Linketinder. Nesta etapa o banco é independente: tem os próprios dados de exemplo e é testado
-com consultas SQL.
+Modelagem e SQL do banco do Linketinder. O banco tem dados de exemplo e consultas de teste, e é usado pelo
+backend por meio de JDBC (veja [Integração com o banco (JDBC)](#integração-com-o-banco-jdbc)).
 
 ### Tecnologias
 
@@ -349,7 +383,7 @@ Database/
 
 ```bash
 cd Linketinder-Project/Database
-export PGPASSWORD=postgres   # senha do usuário postgres
+export PGPASSWORD=suasenha  
 
 createdb -h localhost -U postgres linketinder                          # cria o banco (só na primeira vez)
 psql -h localhost -U postgres -d linketinder -f schema.sql             # cria as tabelas
