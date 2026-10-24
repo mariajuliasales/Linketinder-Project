@@ -1,77 +1,43 @@
 package com.mariajuliasales.service
 
 import com.mariajuliasales.dao.EnterpriseDAO
+import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.model.Enterprise
-import com.mariajuliasales.util.ValidateUtil
+import com.mariajuliasales.service.validator.EnterpriseValidator
+
+import static com.mariajuliasales.exception.EntityNotFoundException.requireFound
 
 class EnterpriseService {
 
-    private final EnterpriseDAO enterpriseDAO
+	private static final String ENTITY_NAME = "Empresa"
 
-    EnterpriseService(EnterpriseDAO enterpriseDAO) {
-        this.enterpriseDAO = enterpriseDAO
-    }
+	private final EnterpriseDAO enterpriseDAO
 
-    Enterprise create(Enterprise enterprise) {
-        validate(enterprise, true)
-        return enterpriseDAO.create(enterprise)
-    }
+	EnterpriseService(EnterpriseDAO enterpriseDAO) {
+		this.enterpriseDAO = enterpriseDAO
+	}
 
-    Enterprise getEnterpriseById(int id) {
-        enterpriseDAO.findById(id)
-    }
+	Enterprise create(Enterprise enterprise) {
+		EnterpriseValidator.validateForCreate(enterprise)
+		enterpriseDAO.create(enterprise)
+	}
 
-    List<Enterprise> getAllEnterprises() {
-        enterpriseDAO.findAll()
-    }
+	List<Enterprise> findAll() {
+		enterpriseDAO.findAll()
+	}
 
-    Enterprise update(Enterprise enterprise) {
-        validate(enterprise, false)
-        Enterprise updated = enterpriseDAO.update(enterprise)
-        if (!updated) {
-            throw new IllegalArgumentException("Enterprise not found")
-        }
-        updated
-    }
+	Enterprise findById(int id) {
+		requireFound(enterpriseDAO.findById(id), ENTITY_NAME, id)
+	}
 
-    void delete(int id) {
-        if (!enterpriseDAO.delete(id)) {
-            throw new IllegalArgumentException("Enterprise not found")
-        }
-    }
+	Enterprise update(Enterprise enterprise) {
+		EnterpriseValidator.validateForUpdate(enterprise)
+		requireFound(enterpriseDAO.update(enterprise), ENTITY_NAME, enterprise.id)
+	}
 
-    private static void validate(Enterprise enterprise, boolean passwordRequired) {
-        if (enterprise == null) {
-            throw new IllegalArgumentException("Invalid enterprise data")
-        }
-
-        if (!ValidateUtil.isValidCnpj(enterprise.cnpj)) {
-            throw new IllegalArgumentException("Invalid enterprise cnpj")
-        }
-
-        if (!ValidateUtil.isValidEmail(enterprise.email)) {
-            throw new IllegalArgumentException("Invalid enterprise email")
-        }
-
-        if ((passwordRequired || enterprise.password) && !ValidateUtil.isValidPassword(enterprise.password)) {
-            throw new IllegalArgumentException("Invalid enterprise password: it must have at least 6 characters")
-        }
-
-        if (!enterprise.name?.trim()) {
-            throw new IllegalArgumentException("Invalid enterprise name")
-        }
-
-        if (enterprise.address == null) {
-            throw new IllegalArgumentException("Invalid enterprise address")
-        }
-
-        if (!ValidateUtil.isValidCep(enterprise.address.cep)) {
-            throw new IllegalArgumentException("Invalid enterprise cep")
-        }
-
-        if (!ValidateUtil.isValidLocation(enterprise.address)) {
-            throw new IllegalArgumentException("Invalid enterprise city or state")
-        }
-    }
-
+	void delete(int id) {
+		if (!enterpriseDAO.delete(id)) {
+			throw new EntityNotFoundException(ENTITY_NAME, id)
+		}
+	}
 }

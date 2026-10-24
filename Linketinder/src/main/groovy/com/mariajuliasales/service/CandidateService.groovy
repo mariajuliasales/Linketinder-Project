@@ -1,85 +1,43 @@
 package com.mariajuliasales.service
 
 import com.mariajuliasales.dao.CandidateDAO
+import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.model.Candidate
-import com.mariajuliasales.util.ValidateUtil
+import com.mariajuliasales.service.validator.CandidateValidator
+
+import static com.mariajuliasales.exception.EntityNotFoundException.requireFound
 
 class CandidateService {
 
-    private final CandidateDAO candidateDAO
+	private static final String ENTITY_NAME = "Candidato"
 
-    CandidateService(CandidateDAO candidateDAO) {
-        this.candidateDAO = candidateDAO
-    }
+	private final CandidateDAO candidateDAO
 
-    Candidate create(Candidate candidate) {
-        validate(candidate, true)
-        candidateDAO.create(candidate)
-    }
+	CandidateService(CandidateDAO candidateDAO) {
+		this.candidateDAO = candidateDAO
+	}
 
-    List<Candidate> getAllCandidates() {
-        candidateDAO.findAll()
-    }
+	Candidate create(Candidate candidate) {
+		CandidateValidator.validateForCreate(candidate)
+		candidateDAO.create(candidate)
+	}
 
-    Candidate getCandidateById(int id) {
-        candidateDAO.findById(id)
-    }
+	List<Candidate> findAll() {
+		candidateDAO.findAll()
+	}
 
-    Candidate update(Candidate candidate) {
-        validate(candidate, false)
-        Candidate updated = candidateDAO.update(candidate)
-        if (!updated) {
-            throw new IllegalArgumentException("Candidate not found")
-        }
-        updated
-    }
+	Candidate findById(int id) {
+		requireFound(candidateDAO.findById(id), ENTITY_NAME, id)
+	}
 
-    void delete(int id) {
-        if (!candidateDAO.delete(id)) {
-            throw new IllegalArgumentException("Candidate not found")
-        }
-    }
+	Candidate update(Candidate candidate) {
+		CandidateValidator.validateForUpdate(candidate)
+		requireFound(candidateDAO.update(candidate), ENTITY_NAME, candidate.id)
+	}
 
-    private static void validate(Candidate candidate, boolean passwordRequired) {
-        if (candidate == null) {
-            throw new IllegalArgumentException("Invalid candidate data")
-        }
-
-        if (!ValidateUtil.isValidCpf(candidate.cpf)){
-            throw new IllegalArgumentException("Invalid candidate cpf")
-        }
-
-        if (!ValidateUtil.isValidEmail(candidate.email)) {
-            throw new IllegalArgumentException("Invalid candidate email")
-        }
-
-        if ((passwordRequired || candidate.password) && !ValidateUtil.isValidPassword(candidate.password)) {
-            throw new IllegalArgumentException("Invalid candidate password: it must have at least 6 characters")
-        }
-
-        if (!candidate.name?.trim()) {
-            throw new IllegalArgumentException("Invalid candidate name")
-        }
-
-        if (candidate.address == null) {
-            throw new IllegalArgumentException("Invalid candidate address")
-        }
-
-        if (!ValidateUtil.isValidCep(candidate.address.cep)) {
-            throw new IllegalArgumentException("Invalid candidate cep")
-        }
-
-        if (!ValidateUtil.isValidLocation(candidate.address)) {
-            throw new IllegalArgumentException("Invalid candidate city or state")
-        }
-
-        if (candidate.birthDate == null) {
-            throw new IllegalArgumentException("Invalid candidate birth date")
-        }
-
-        if (!candidate.training?.trim()) {
-            throw new IllegalArgumentException("Invalid candidate training")
-        }
-    }
-
+	void delete(int id) {
+		if (!candidateDAO.delete(id)) {
+			throw new EntityNotFoundException(ENTITY_NAME, id)
+		}
+	}
 }

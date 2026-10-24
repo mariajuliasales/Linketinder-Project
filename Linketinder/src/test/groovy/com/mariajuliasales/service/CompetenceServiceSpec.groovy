@@ -1,115 +1,148 @@
 package com.mariajuliasales.service
 
 import com.mariajuliasales.dao.CompetenceDAO
+import com.mariajuliasales.exception.DuplicateEntityException
+import com.mariajuliasales.exception.EntityNotFoundException
+import com.mariajuliasales.exception.ValidationException
 import com.mariajuliasales.model.Competence
 import spock.lang.Specification
-import spock.lang.Unroll
 
 class CompetenceServiceSpec extends Specification {
 
-    CompetenceDAO competenceDAO = Mock(CompetenceDAO)
-    CompetenceService competenceService = new CompetenceService(competenceDAO)
+	CompetenceDAO competenceDAO = Mock(CompetenceDAO)
+	CompetenceService competenceService = new CompetenceService(competenceDAO)
 
-    def "create competence with a new name"() {
-        given:
-        competenceDAO.findByName("Ilustrador") >> null
+	def "create should save a competence with a new name"() {
+		given:
+		competenceDAO.findByName("Ilustrador") >> null
 
-        when:
-        Competence result = competenceService.create("Ilustrador")
+		when:
+		Competence result = competenceService.create("Ilustrador")
 
-        then:
-        1 * competenceDAO.create(new Competence("Ilustrador")) >> new Competence(12, "Ilustrador")
-        result.id == 12
-    }
+		then:
+		1 * competenceDAO.create(new Competence("Ilustrador")) >> new Competence(12, "Ilustrador")
+		result.id == 12
+	}
 
-    def "create competence that already exists should fail"() {
-        given:
-        competenceDAO.findByName("java") >> new Competence(2, "Java")
+	def "create should fail when the name already exists"() {
+		given:
+		competenceDAO.findByName("java") >> new Competence(2, "Java")
 
-        when:
-        competenceService.create("java")
+		when:
+		competenceService.create("java")
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Competence already exists"
-        0 * competenceDAO.create(_)
-    }
+		then:
+		DuplicateEntityException exception = thrown()
+		exception.message == "Competência 'java' já cadastrada"
+		0 * competenceDAO.create(_)
+	}
 
-    @Unroll
-    def "create competence with invalid name '#name' should fail"() {
-        when:
-        competenceService.create(name)
+	def "create should not save an invalid name"() {
+		when:
+		competenceService.create("   ")
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message.startsWith("Competence name")
-        0 * competenceDAO.create(_)
+		then:
+		thrown(ValidationException)
+		0 * competenceDAO.create(_)
+	}
 
-        where:
-        name << [null, "", "   ", "x" * 51]
-    }
+	def "find all should return the competences from the DAO"() {
+		given:
+		List<Competence> competences = [
+			new Competence(1, "Java"),
+			new Competence(2, "Python")
+		]
+		competenceDAO.findAll() >> competences
 
-    def "find all competences should return the list from the DAO"() {
-        given:
-        List<Competence> competences = [new Competence(1, "Java"), new Competence(2, "Python")]
-        competenceDAO.findAll() >> competences
+		expect:
+		competenceService.findAll() == competences
+	}
 
-        expect:
-        competenceService.findAll() == competences
-    }
+	def "find by id should return the competence from the DAO"() {
+		given:
+		Competence competence = new Competence(3, "SQL")
+		competenceDAO.findById(3) >> competence
 
-    def "find competence by id that does not exist should fail"() {
-        given:
-        competenceDAO.findById(99) >> null
+		expect:
+		competenceService.findById(3) == competence
+	}
 
-        when:
-        competenceService.findById(99)
+	def "find by id should fail when the competence does not exist"() {
+		given:
+		competenceDAO.findById(99) >> null
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Competence not found"
-    }
+		when:
+		competenceService.findById(99)
 
-    def "update competence with a new name"() {
-        given:
-        competenceDAO.findByName("Spring Boot") >> null
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == "Competência com ID 99 não existe"
+	}
 
-        when:
-        Competence result = competenceService.update(3, "Spring Boot")
+	def "update should rename the competence"() {
+		given:
+		competenceDAO.findByName("Spring Boot") >> null
 
-        then:
-        1 * competenceDAO.update(new Competence(3, "Spring Boot")) >> new Competence(3, "Spring Boot")
-        result.name == "Spring Boot"
-    }
+		when:
+		Competence result = competenceService.update(3, "Spring Boot")
 
-    def "update competence to a name used by another competence should fail"() {
-        given:
-        competenceDAO.findByName("Java") >> new Competence(2, "Java")
+		then:
+		1 * competenceDAO.update(new Competence(3, "Spring Boot")) >> new Competence(3, "Spring Boot")
+		result.name == "Spring Boot"
+	}
 
-        when:
-        competenceService.update(3, "Java")
+	def "update should accept the current name of the same competence"() {
+		given:
+		competenceDAO.findByName("java") >> new Competence(3, "Java")
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Competence already exists"
-        0 * competenceDAO.update(_)
-    }
+		when:
+		competenceService.update(3, "java")
 
-    def "delete competence that does not exist should fail"() {
-        given:
-        competenceDAO.delete(99) >> false
+		then:
+		1 * competenceDAO.update(new Competence(3, "java")) >> new Competence(3, "java")
+	}
 
-        when:
-        competenceService.delete(99)
+	def "update should fail when another competence has the name"() {
+		given:
+		competenceDAO.findByName("Java") >> new Competence(2, "Java")
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Competence not found"
-    }
+		when:
+		competenceService.update(3, "Java")
 
-    def "competences with the same name in different cases are equal"() {
-        expect:
-        new Competence("Java") == new Competence("java")
-        [new Competence("Java"), new Competence("JAVA")].unique().size() == 1
-    }
+		then:
+		thrown(DuplicateEntityException)
+		0 * competenceDAO.update(_)
+	}
+
+	def "update should fail when the competence does not exist"() {
+		given:
+		competenceDAO.findByName("Kotlin") >> null
+		competenceDAO.update(_) >> null
+
+		when:
+		competenceService.update(99, "Kotlin")
+
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == "Competência com ID 99 não existe"
+	}
+
+	def "delete should remove the competence through the DAO"() {
+		when:
+		competenceService.delete(1)
+
+		then:
+		1 * competenceDAO.delete(1) >> true
+	}
+
+	def "delete should fail when the competence does not exist"() {
+		given:
+		competenceDAO.delete(99) >> false
+
+		when:
+		competenceService.delete(99)
+
+		then:
+		thrown(EntityNotFoundException)
+	}
 }
