@@ -5,7 +5,6 @@ import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.model.VacancyStatus
 
 import java.sql.Connection
-import java.sql.PreparedStatement
 import java.sql.ResultSet
 
 class VacancyDAO {
@@ -16,11 +15,20 @@ class VacancyDAO {
             FROM vacancy v
             JOIN address a    ON a.id = v.address_id
             JOIN enterprise e ON e.id = v.enterprise_id
-            JOIN person p     ON p.id = e.person_id""".toString()
+            JOIN person p     ON p.id = e.person_id"""
+	private static final String INSERT_VACANCY = '''
+            INSERT INTO vacancy (enterprise_id, title, description, status, address_id)
+            VALUES (?, ?, ?, ?::vacancy_status, ?)
+            RETURNING id'''
+	private static final String UPDATE_VACANCY = '''
+            UPDATE vacancy
+            SET title = ?, description = ?, status = ?::vacancy_status, address_id = ?
+            WHERE id = ?'''
+	private static final String WHERE_ID = 'WHERE v.id = ?'
+	private static final String WHERE_ENTERPRISE = 'WHERE v.enterprise_id = ?'
 
 	private final DatabaseConnection database
 	private final CompetenceDAO competenceDAO
-	private final AddressDAO addressDAO = new AddressDAO()
 
 	VacancyDAO(DatabaseConnection database, CompetenceDAO competenceDAO) {
 		this.database = database
@@ -29,64 +37,53 @@ class VacancyDAO {
 
 	Vacancy create(Vacancy vacancy) {
 		database.withTransaction { Connection connection ->
-			int addressId = addressDAO.insert(connection, vacancy.address)
-
-			String sql = '''INSERT INTO vacancy (enterprise_id, title, description, status, address_id)
-                            VALUES (?, ?, ?, ?::vacancy_status, ?)
-                            RETURNING id'''
-			connection.prepareStatement(sql).withCloseable { PreparedStatement statement ->
-				statement.setInt(1, vacancy.enterprise.id)
-				statement.setString(2, vacancy.title)
-				statement.setString(3, vacancy.description)
-				statement.setString(4, (vacancy.status ?: VacancyStatus.OPEN).name())
-				statement.setInt(5, addressId)
-				statement.executeQuery().withCloseable { ResultSet result ->
-					result.next()
-					vacancy.id = result.getInt('id')
-				}
-			}
-
+			int addressId = AddressDAO.insert(connection, vacancy.address)
+			vacancy.id = SqlExecutor.insertReturningId(connection, INSERT_VACANCY,
+					[
+						vacancy.enterprise.id,
+						vacancy.title,
+						vacancy.description,
+						statusName(vacancy),
+						addressId
+					])
 			saveCompetences(connection, vacancy)
 			vacancy
 		}
 	}
 
 	List<Vacancy> findAll() {
-		findWhere('', null)
+		database.withConnection { Connection connection -> findWhere(connection, '', []) }
 	}
 
 	Vacancy findById(int id) {
-		findWhere('WHERE v.id = ?', id)[0]
+		database.withConnection { Connection connection ->
+			List<Vacancy> found = findWhere(connection, WHERE_ID, [id])
+			found ? found.first() : null
+		}
 	}
 
 	List<Vacancy> findByEnterprise(int enterpriseId) {
-		findWhere('WHERE v.enterprise_id = ?', enterpriseId)
+		database.withConnection { Connection connection -> findByEnterprise(connection, enterpriseId) }
 	}
 
 	List<Vacancy> findByEnterprise(Connection connection, int enterpriseId) {
-		findWhere(connection, 'WHERE v.enterprise_id = ?', enterpriseId)
+		findWhere(connection, WHERE_ENTERPRISE, [enterpriseId])
 	}
 
 	Vacancy update(Vacancy vacancy) {
 		database.withTransaction { Connection connection ->
-			int addressId = addressDAO.insert(connection, vacancy.address)
-
-			String sql = '''UPDATE vacancy
-                            SET title = ?, description = ?, status = ?::vacancy_status, address_id = ?
-                            WHERE id = ?'''
-			int updated = connection.prepareStatement(sql).withCloseable { PreparedStatement statement ->
-				statement.setString(1, vacancy.title)
-				statement.setString(2, vacancy.description)
-				statement.setString(3, (vacancy.status ?: VacancyStatus.OPEN).name())
-				statement.setInt(4, addressId)
-				statement.setInt(5, vacancy.id)
-				statement.executeUpdate()
-			}
-			if (updated == 0) {
-				connection.rollback()
+			if (!exists(connection, vacancy.id)) {
 				return null
 			}
-
+			int addressId = AddressDAO.insert(connection, vacancy.address)
+			SqlExecutor.update(connection, UPDATE_VACANCY,
+					[
+						vacancy.title,
+						vacancy.description,
+						statusName(vacancy),
+						addressId,
+						vacancy.id
+					])
 			saveCompetences(connection, vacancy)
 			vacancy
 		}
@@ -94,56 +91,56 @@ class VacancyDAO {
 
 	boolean delete(int id) {
 		database.withConnection { Connection connection ->
-			connection.prepareStatement('DELETE FROM vacancy WHERE id = ?').withCloseable { PreparedStatement statement ->
-				statement.setInt(1, id)
-				statement.executeUpdate() > 0
-			}
+			SqlExecutor.update(connection, 'DELETE FROM vacancy WHERE id = ?', [id]) > 0
 		}
 	}
 
+	private static boolean exists(Connection connection, int id) {
+		SqlExecutor.queryFirst(connection, 'SELECT id FROM vacancy WHERE id = ?', [id]) { ResultSet row ->
+			row.getInt('id')
+		} != null
+	}
+
+	private static String statusName(Vacancy vacancy) {
+		(vacancy.status ?: VacancyStatus.OPEN).name()
+	}
 
 	private void saveCompetences(Connection connection, Vacancy vacancy) {
-		competenceDAO.replaceLinks(connection, 'vacancy_competence', 'vacancy_id', vacancy.id, vacancy.competences)
+		competenceDAO.replaceLinks(connection, CompetenceLink.VACANCY, vacancy.id, vacancy.competences)
 	}
 
-	private List<Vacancy> findWhere(String where, Integer parameter) {
-		database.withConnection { Connection connection -> findWhere(connection, where, parameter) }
-	}
-
-	private List<Vacancy> findWhere(Connection connection, String where, Integer parameter) {
-		connection.prepareStatement("${SELECT_VACANCY} ${where} ORDER BY v.id".toString()).withCloseable { PreparedStatement statement ->
-			if (parameter != null) {
-				statement.setInt(1, parameter)
-			}
-			statement.executeQuery().withCloseable { ResultSet result -> readAll(connection, result) }
-		}
-	}
-
-	private List<Vacancy> readAll(Connection connection, ResultSet result) {
-		List<Vacancy> vacancies = []
-		Map<Integer, Enterprise> enterprises = [:]
-		while (result.next()) {
-			Vacancy vacancy = new Vacancy(
-					id: result.getInt('id'),
-					title: result.getString('title'),
-					description: result.getString('description'),
-					status: VacancyStatus.valueOf(result.getString('status')),
-					address: AddressDAO.read(result)
-					)
-			Enterprise enterprise = enterprises.computeIfAbsent(result.getInt('enterprise_id')) { Integer id ->
-				new Enterprise(
-						id: id,
-						name: result.getString('enterprise_name'),
-						email: result.getString('enterprise_email'),
-						cnpj: result.getString('cnpj')
-						)
-			}
-			enterprise.addVacancy(vacancy)
-			vacancies << vacancy
+	private List<Vacancy> findWhere(Connection connection, String condition, List<?> parameters) {
+		Map<Integer, Enterprise> enterprisesById = [:]
+		String sql = "${SELECT_VACANCY} ${condition} ORDER BY v.id"
+		List<Vacancy> vacancies = SqlExecutor.query(connection, sql, parameters) { ResultSet row ->
+			mapRow(row, enterprisesById)
 		}
 		vacancies.each { Vacancy vacancy ->
-			vacancy.competences = competenceDAO.findLinked(connection, 'vacancy_competence', 'vacancy_id', vacancy.id)
+			vacancy.competences = competenceDAO.findLinked(connection, CompetenceLink.VACANCY, vacancy.id)
 		}
 		vacancies
+	}
+
+	private static Vacancy mapRow(ResultSet row, Map<Integer, Enterprise> enterprisesById) {
+		Vacancy vacancy = new Vacancy(
+				id: row.getInt('id'),
+				title: row.getString('title'),
+				description: row.getString('description'),
+				status: VacancyStatus.valueOf(row.getString('status')),
+				address: AddressDAO.mapRow(row)
+				)
+		enterpriseOf(row, enterprisesById).addVacancy(vacancy)
+		vacancy
+	}
+
+	private static Enterprise enterpriseOf(ResultSet row, Map<Integer, Enterprise> enterprisesById) {
+		enterprisesById.computeIfAbsent(row.getInt('enterprise_id')) { Integer id ->
+			new Enterprise(
+					id: id,
+					name: row.getString('enterprise_name'),
+					email: row.getString('enterprise_email'),
+					cnpj: row.getString('cnpj')
+					)
+		}
 	}
 }

@@ -1,19 +1,21 @@
 package com.mariajuliasales.dao
 
 import com.mariajuliasales.model.Enterprise
+import com.mariajuliasales.model.PersonType
 import com.mariajuliasales.util.DocumentNormalizer
 
 import java.sql.Connection
-import java.sql.PreparedStatement
 import java.sql.ResultSet
 
-class EnterpriseDAO extends PersonDAO {
+class EnterpriseDAO extends PersonDAO<Enterprise> {
 
 	private static final String SELECT_ENTERPRISE = """
-            SELECT e.id, e.person_id, e.cnpj, ${PERSON_COLUMNS}
-            FROM enterprise e
-            JOIN person p  ON p.id = e.person_id
-            JOIN address a ON a.id = p.address_id""".toString()
+            SELECT enterprise.id, enterprise.cnpj, ${PERSON_COLUMNS}
+            FROM enterprise
+            JOIN person p  ON p.id = enterprise.person_id
+            JOIN address a ON a.id = p.address_id"""
+	private static final String INSERT_ENTERPRISE = 'INSERT INTO enterprise (person_id, cnpj) VALUES (?, ?) RETURNING id'
+	private static final String UPDATE_ENTERPRISE = 'UPDATE enterprise SET cnpj = ? WHERE id = ?'
 
 	private final VacancyDAO vacancyDAO
 
@@ -22,94 +24,52 @@ class EnterpriseDAO extends PersonDAO {
 		this.vacancyDAO = vacancyDAO
 	}
 
-	Enterprise create(Enterprise enterprise) {
-		database.withTransaction { Connection connection ->
-			int personId = insertPerson(connection, enterprise, 'ENTERPRISE')
-
-			connection.prepareStatement('INSERT INTO enterprise (person_id, cnpj) VALUES (?, ?) RETURNING id').withCloseable { PreparedStatement statement ->
-				statement.setInt(1, personId)
-				statement.setString(2, DocumentNormalizer.normalizeCnpj(enterprise.cnpj))
-				statement.executeQuery().withCloseable { ResultSet result ->
-					result.next()
-					enterprise.id = result.getInt('id')
-				}
-			}
-
-			saveCompetences(connection, enterprise)
-			enterprise
-		}
+	@Override
+	protected String getTableName() {
+		'enterprise'
 	}
 
-	List<Enterprise> findAll() {
-		database.withConnection { Connection connection ->
-			connection.prepareStatement("${SELECT_ENTERPRISE} ORDER BY e.id".toString()).withCloseable { PreparedStatement statement ->
-				statement.executeQuery().withCloseable { ResultSet result -> readAll(connection, result) }
-			}
-		}
+	@Override
+	protected PersonType getPersonType() {
+		PersonType.ENTERPRISE
 	}
 
-	Enterprise findById(int id) {
-		database.withConnection { Connection connection ->
-			connection.prepareStatement("${SELECT_ENTERPRISE} WHERE e.id = ?".toString()).withCloseable { PreparedStatement statement ->
-				statement.setInt(1, id)
-				statement.executeQuery().withCloseable { ResultSet result -> readAll(connection, result)[0] }
-			}
-		}
+	@Override
+	protected CompetenceLink getCompetenceLink() {
+		CompetenceLink.ENTERPRISE
 	}
 
-	Enterprise update(Enterprise enterprise) {
-		database.withTransaction { Connection connection ->
-			Integer personId = findPersonId(connection, enterprise.id)
-			if (personId == null) {
-				return null
-			}
-
-			updatePerson(connection, personId, enterprise)
-
-			connection.prepareStatement('UPDATE enterprise SET cnpj = ? WHERE id = ?').withCloseable { PreparedStatement statement ->
-				statement.setString(1, DocumentNormalizer.normalizeCnpj(enterprise.cnpj))
-				statement.setInt(2, enterprise.id)
-				statement.executeUpdate()
-			}
-
-			saveCompetences(connection, enterprise)
-			enterprise
-		}
+	@Override
+	protected String getSelectSql() {
+		SELECT_ENTERPRISE
 	}
 
-	boolean delete(int id) {
-		database.withTransaction { Connection connection ->
-			Integer personId = findPersonId(connection, id)
-			personId != null && deletePerson(connection, personId)
-		}
+	@Override
+	protected Enterprise mapRow(ResultSet row) {
+		Enterprise enterprise = new Enterprise(id: row.getInt('id'), cnpj: row.getString('cnpj'))
+		mapPersonFields(enterprise, row)
 	}
 
-
-
-	private void saveCompetences(Connection connection, Enterprise enterprise) {
-		competenceDAO.replaceLinks(connection, 'enterprise_competence', 'enterprise_id', enterprise.id, enterprise.competences)
+	@Override
+	protected int insertDetails(Connection connection, int personId, Enterprise enterprise) {
+		SqlExecutor.insertReturningId(connection, INSERT_ENTERPRISE,
+				[
+					personId,
+					DocumentNormalizer.normalizeCnpj(enterprise.cnpj)
+				])
 	}
 
-	private static Integer findPersonId(Connection connection, int enterpriseId) {
-		connection.prepareStatement('SELECT person_id FROM enterprise WHERE id = ?').withCloseable { PreparedStatement statement ->
-			statement.setInt(1, enterpriseId)
-			statement.executeQuery().withCloseable { ResultSet result ->
-				result.next() ? result.getInt('person_id') : null
-			}
-		}
+	@Override
+	protected void updateDetails(Connection connection, Enterprise enterprise) {
+		SqlExecutor.update(connection, UPDATE_ENTERPRISE, [
+			DocumentNormalizer.normalizeCnpj(enterprise.cnpj),
+			enterprise.id
+		])
 	}
 
-	private List<Enterprise> readAll(Connection connection, ResultSet result) {
-		List<Enterprise> enterprises = []
-		while (result.next()) {
-			Enterprise enterprise = new Enterprise(id: result.getInt('id'), cnpj: result.getString('cnpj'))
-			fillPerson(enterprise, result)
-			enterprises << enterprise
-		}
-		enterprises.each { Enterprise enterprise ->
-			enterprise.competences = competenceDAO.findLinked(connection, 'enterprise_competence', 'enterprise_id', enterprise.id)
-			vacancyDAO.findByEnterprise(connection, enterprise.id).each { enterprise.addVacancy(it) }
-		}
-		enterprises
+	@Override
+	protected void loadRelations(Connection connection, Enterprise enterprise) {
+		super.loadRelations(connection, enterprise)
+		vacancyDAO.findByEnterprise(connection, enterprise.id).each { enterprise.addVacancy(it) }
 	}
 }

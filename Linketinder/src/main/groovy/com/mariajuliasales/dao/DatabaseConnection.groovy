@@ -1,21 +1,23 @@
 package com.mariajuliasales.dao
 
-import org.postgresql.util.PSQLException
-
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.SQLException
 
 class DatabaseConnection {
 
+	private static final String DEFAULT_URL = 'jdbc:postgresql://localhost:5432/linketinder'
+	private static final String DEFAULT_USER = 'postgres'
+	private static final String DEFAULT_PASSWORD = 'postgres'
+
 	final String url
 	final String user
 	final String password
 
 	DatabaseConnection(
-	String url = System.getenv('DB_URL') ?: 'jdbc:postgresql://localhost:5432/linketinder',
-	String user = System.getenv('DB_USER') ?: 'postgres',
-	String password = System.getenv('DB_PASSWORD') ?: 'postgres'
+	String url = System.getenv('DB_URL') ?: DEFAULT_URL,
+	String user = System.getenv('DB_USER') ?: DEFAULT_USER,
+	String password = System.getenv('DB_PASSWORD') ?: DEFAULT_PASSWORD
 	) {
 		this.url = url
 		this.user = user
@@ -29,8 +31,8 @@ class DatabaseConnection {
 	def <T> T withConnection(Closure<T> work) {
 		try {
 			getConnection().withCloseable { Connection connection -> work(connection) }
-		} catch (SQLException e) {
-			throw translate(e)
+		} catch (SQLException exception) {
+			throw SqlExceptionTranslator.translate(exception)
 		}
 	}
 
@@ -41,23 +43,18 @@ class DatabaseConnection {
 				T result = work(connection)
 				connection.commit()
 				result
-			} catch (Exception e) {
-				connection.rollback()
-				throw e
+			} catch (Exception exception) {
+				rollback(connection, exception)
+				throw exception
 			}
 		}
 	}
 
-	private static Exception translate(SQLException e) {
-		String detail = (e instanceof PSQLException) ? e.serverErrorMessage?.detail : null
-		switch (e.SQLState) {
-			case '23505':
-				return new IllegalArgumentException("Record already exists. ${detail ?: e.message}", e)
-			case '23503':   // foreign_key_violation
-			case '23001':   // restrict_violation (ON DELETE RESTRICT)
-				return new IllegalStateException("Record is used by other records. ${detail ?: e.message}", e)
-			default:
-				return e
+	private static void rollback(Connection connection, Exception cause) {
+		try {
+			connection.rollback()
+		} catch (SQLException rollbackFailure) {
+			cause.addSuppressed(rollbackFailure)
 		}
 	}
 }
