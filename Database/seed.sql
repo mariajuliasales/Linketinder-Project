@@ -1,6 +1,8 @@
--- Todas as senhas são '123456'
-
 BEGIN;
+
+CREATE FUNCTION pg_temp.seed_password_hash() RETURNS VARCHAR AS $$
+    SELECT crypt('123456', gen_salt('bf'));
+$$ LANGUAGE sql;
 
 CREATE FUNCTION pg_temp.new_address(p_cep CHAR(8), p_city VARCHAR, p_state CHAR(2)) RETURNS INTEGER AS $$
     INSERT INTO address (cep, city, state) VALUES (p_cep, p_city, p_state) RETURNING id;
@@ -11,13 +13,13 @@ INSERT INTO competence (name) VALUES
     ('TypeScript'), ('SQL'), ('Docker'), ('Kafka'), ('React');
 
 INSERT INTO person (type, name, email, description, password_hash, address_id) VALUES
-    ('CANDIDATE', 'Maria Julia Sales',       'mariajuliasales@gmail.com', 'Software Engineer',   crypt('123456', gen_salt('bf')), pg_temp.new_address('36700386', 'São Paulo',      'SP')),
-    ('CANDIDATE', 'Lucas Andrade Silveira',  'lucas.andrade@gmail.com',   'Backend Developer',   crypt('123456', gen_salt('bf')), pg_temp.new_address('30110010', 'Belo Horizonte', 'MG')),
-    ('CANDIDATE', 'Beatriz Lima Rocha',      'beatriz.rocha@outlook.com', 'Full Stack Engineer', crypt('123456', gen_salt('bf')), pg_temp.new_address('22041001', 'Rio de Janeiro', 'RJ')),
-    ('CANDIDATE', 'Gabriel Santos Oliveira', 'gabriel.santos@dev.com',    'Data Engineer',       crypt('123456', gen_salt('bf')), pg_temp.new_address('80010000', 'Curitiba',       'PR')),
-    ('CANDIDATE', 'Fernanda Costa Souza',    'fernanda.souza@gmail.com',  'DevOps Engineer',     crypt('123456', gen_salt('bf')), pg_temp.new_address('88010000', 'Florianópolis',  'SC')),
+    ('CANDIDATE', 'Maria Julia Sales',       'mariajuliasales@gmail.com', 'Software Engineer',   pg_temp.seed_password_hash(), pg_temp.new_address('36700386', 'São Paulo',      'SP')),
+    ('CANDIDATE', 'Lucas Andrade Silveira',  'lucas.andrade@gmail.com',   'Backend Developer',   pg_temp.seed_password_hash(), pg_temp.new_address('30110010', 'Belo Horizonte', 'MG')),
+    ('CANDIDATE', 'Beatriz Lima Rocha',      'beatriz.rocha@outlook.com', 'Full Stack Engineer', pg_temp.seed_password_hash(), pg_temp.new_address('22041001', 'Rio de Janeiro', 'RJ')),
+    ('CANDIDATE', 'Gabriel Santos Oliveira', 'gabriel.santos@dev.com',    'Data Engineer',       pg_temp.seed_password_hash(), pg_temp.new_address('80010000', 'Curitiba',       'PR')),
+    ('CANDIDATE', 'Fernanda Costa Souza',    'fernanda.souza@gmail.com',  'DevOps Engineer',     pg_temp.seed_password_hash(), pg_temp.new_address('88010000', 'Florianópolis',  'SC')),
     ('CANDIDATE', 'Sandubinha da Silva',     'sandubinha@email.com',
-     'Desenvolvedor apaixonado por backend e por bons lanches.',                     crypt('123456', gen_salt('bf')), pg_temp.new_address('74000000', 'Goiânia',        'GO'));
+     'Desenvolvedor apaixonado por backend e por bons lanches.',                     pg_temp.seed_password_hash(), pg_temp.new_address('74000000', 'Goiânia',        'GO'));
 
 INSERT INTO candidate (person_id, cpf, birth_date, training)
 SELECT p.id, data.cpf, data.birth_date::DATE, data.training
@@ -58,13 +60,13 @@ JOIN candidate c   ON c.person_id = p.id
 JOIN competence co ON co.name = data.competence;
 
 INSERT INTO person (type, name, email, description, password_hash, address_id) VALUES
-    ('ENTERPRISE', 'TechSolutions Brasil',  'contato@techsolutions.com.br', 'Desenvolvimento de software sob medida', crypt('123456', gen_salt('bf')), pg_temp.new_address('01310000', 'São Paulo',      'SP')),
-    ('ENTERPRISE', 'Inovação Digital LTDA', 'rh@inovacaodigital.io',        'Consultoria em transformação digital',   crypt('123456', gen_salt('bf')), pg_temp.new_address('30110010', 'Belo Horizonte', 'MG')),
-    ('ENTERPRISE', 'DataAnalytics Global',  'carreiras@dataanalytics.com',  'Soluções de dados e Big Data',           crypt('123456', gen_salt('bf')), pg_temp.new_address('22041001', 'Rio de Janeiro', 'RJ')),
-    ('ENTERPRISE', 'CloudScale Services',   'jobs@cloudscale.com',          'Infraestrutura multicloud',              crypt('123456', gen_salt('bf')), pg_temp.new_address('88010000', 'Florianópolis',  'SC')),
-    ('ENTERPRISE', 'FrontCraft Studios',    'talent@frontcraft.dev',        'Experiências web modernas e acessíveis', crypt('123456', gen_salt('bf')), pg_temp.new_address('80010000', 'Curitiba',       'PR')),
+    ('ENTERPRISE', 'TechSolutions Brasil',  'contato@techsolutions.com.br', 'Desenvolvimento de software sob medida', pg_temp.seed_password_hash(), pg_temp.new_address('01310000', 'São Paulo',      'SP')),
+    ('ENTERPRISE', 'Inovação Digital LTDA', 'rh@inovacaodigital.io',        'Consultoria em transformação digital',   pg_temp.seed_password_hash(), pg_temp.new_address('30110010', 'Belo Horizonte', 'MG')),
+    ('ENTERPRISE', 'DataAnalytics Global',  'carreiras@dataanalytics.com',  'Soluções de dados e Big Data',           pg_temp.seed_password_hash(), pg_temp.new_address('22041001', 'Rio de Janeiro', 'RJ')),
+    ('ENTERPRISE', 'CloudScale Services',   'jobs@cloudscale.com',          'Infraestrutura multicloud',              pg_temp.seed_password_hash(), pg_temp.new_address('88010000', 'Florianópolis',  'SC')),
+    ('ENTERPRISE', 'FrontCraft Studios',    'talent@frontcraft.dev',        'Experiências web modernas e acessíveis', pg_temp.seed_password_hash(), pg_temp.new_address('80010000', 'Curitiba',       'PR')),
     ('ENTERPRISE', 'Pastelsoft',            'pastelzinho.frito@pastelsoft.com.br',
-     'ERPs para redes de restaurantes e distribuidoras de bebida de todo o país.',               crypt('123456', gen_salt('bf')), pg_temp.new_address('74000000', 'Goiânia',        'GO'));
+     'ERPs para redes de restaurantes e distribuidoras de bebida de todo o país.',               pg_temp.seed_password_hash(), pg_temp.new_address('74000000', 'Goiânia',        'GO'));
 
 INSERT INTO enterprise (person_id, cnpj)
 SELECT p.id, data.cnpj
