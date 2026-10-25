@@ -3,9 +3,9 @@ Project linketinder {
 }
 
 Enum vacancy_status {
-  OPEN 
-  PAUSED 
-  CLOSED 
+  OPEN
+  PAUSED
+  CLOSED
 }
 
 // ---------------------------------------------------------------------------
@@ -13,7 +13,7 @@ Enum vacancy_status {
 
 Table address {
   id           integer      [pk, increment]
-  cep          char(8)      
+  cep          char(8)
   street       varchar(150)
   number       varchar(10)
   complement   varchar(100)
@@ -49,7 +49,7 @@ Table person {
   type          person_type  [not null]
   name          varchar(150) [not null]
   email         varchar(150) [not null, unique]
-  description   text        
+  description   text
   password_hash varchar(255) [not null]
   address_id    integer      [not null]
   created_at    timestamp    [not null, default: `now()`]
@@ -70,7 +70,6 @@ Table candidate {
   checks {
     `person_type = 'CANDIDATE'` [name: 'candidate_person_type_check']
   }
-
 }
 
 Table enterprise {
@@ -82,9 +81,7 @@ Table enterprise {
   checks {
     `person_type = 'ENTERPRISE'` [name: 'enterprise_person_type_check']
   }
-
 }
-
 
 // ---------------------------------------------------------------------------
 // Vagas e competências
@@ -102,13 +99,11 @@ Table vacancy {
     enterprise_id
     status
   }
-
 }
 
 Table competence {
   id   integer     [pk, increment]
   name varchar(50) [not null, unique, note: 'Python, Java, Spring Framework, Angular, Groovy, JavaScript, TypeScript, SQL, Docker, Kafka, React']
-
 }
 
 Table candidate_competence {
@@ -130,9 +125,7 @@ Table enterprise_competence {
     competence_id
 
   }
-
 }
-
 
 Table vacancy_competence {
   vacancy_id    integer [not null]
@@ -156,9 +149,7 @@ Table candidate_like {
     (candidate_id, vacancy_id) [pk, note: 'Uma curtida por vaga']
     vacancy_id
   }
-
 }
-
 
 Table enterprise_like {
   enterprise_id integer   [not null]
@@ -169,8 +160,6 @@ Table enterprise_like {
     (enterprise_id, candidate_id) [pk, note: 'Uma curtida por candidato']
     candidate_id
   }
-
-
 }
 
 Table vacancy_match {
@@ -183,21 +172,15 @@ Table vacancy_match {
     (candidate_id, vacancy_id) [unique, note: 'Um match por candidato/vaga']
     vacancy_id
   }
-
 }
-
 
 Ref: candidate.(person_id, person_type) > person.(id, type) [delete: cascade]
 Ref: enterprise.(person_id, person_type) > person.(id, type) [delete: cascade]
 
 Ref: person.address_id > address.id [delete: restrict]
 
-
-
 Ref: vacancy.enterprise_id > enterprise.id [delete: cascade]
 Ref: vacancy.address_id > address.id [delete: restrict]
-
-
 
 Ref: candidate_competence.candidate_id > candidate.id [delete: cascade]
 Ref: candidate_competence.competence_id > competence.id [delete: restrict]

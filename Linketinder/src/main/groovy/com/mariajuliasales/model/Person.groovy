@@ -2,21 +2,17 @@ package com.mariajuliasales.model
 
 interface Person {
 
-    int getId()
+	Integer getId()
 
-    String getName()
+	String getName()
 
-    String getEmail()
+	String getEmail()
 
-    String getPassword()
+	String getPassword()
 
-    Address getAddress()
+	String getDescription()
 
-    String getDescription()
+	Address getAddress()
 
-    List<Competence> getCompetences()
-
-    def addCompetence(Competence competence)
-
-    String viewProfileAnonymous()
+	List<Competence> getCompetences()
 }

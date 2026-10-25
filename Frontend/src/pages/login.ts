@@ -1,11 +1,13 @@
-import { HOME_BY_TYPE, login } from '../services';
-import { el } from '../dom';
+import { HOME_BY_TYPE, ROUTES, navigateTo } from '../navigation';
+import { login } from '../services/auth';
+import { elementFromTemplate, requireElement } from '../ui/dom';
+import { readForm } from '../ui/forms';
 
 const TEMPLATE = `
   <div class="card shadow-sm mx-auto" style="max-width: 420px">
     <div class="card-body p-4">
       <h1 class="h3 mb-1">Entrar</h1>
-      <p class="text-body-secondary">Não tem conta? <a href="#/register">Cadastre-se</a></p>
+      <p class="text-body-secondary">Não tem conta? <a href="${ROUTES.register}">Cadastre-se</a></p>
       <div class="alert alert-danger py-2" id="login-error" hidden>E-mail ou senha incorretos.</div>
       <form class="d-grid gap-3">
         <div>
@@ -26,18 +28,18 @@ const TEMPLATE = `
   </div>`;
 
 export function loginPage(): HTMLElement {
-  const page = el('div');
-  page.innerHTML = TEMPLATE;
-
-  const form = page.querySelector('form')!;
-  const error = page.querySelector<HTMLDivElement>('#login-error')!;
+  const page = elementFromTemplate(TEMPLATE);
+  const form = requireElement<HTMLFormElement>(page, 'form');
+  const loginError = requireElement<HTMLDivElement>(page, '#login-error');
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    const data = new FormData(form);
-    const person = login(String(data.get('email')).trim(), String(data.get('password')));
-    error.hidden = person !== undefined;
-    if (person) location.hash = HOME_BY_TYPE[person.type];
+    const fields = readForm(form);
+    const account = login(fields.text('email'), fields.text('password'));
+    loginError.hidden = account !== undefined;
+    if (account) {
+      navigateTo(HOME_BY_TYPE[account.type]);
+    }
   });
 
   return page;

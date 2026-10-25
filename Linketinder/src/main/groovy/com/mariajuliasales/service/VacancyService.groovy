@@ -1,82 +1,49 @@
 package com.mariajuliasales.service
 
 import com.mariajuliasales.dao.VacancyDAO
-import com.mariajuliasales.model.Competence
+import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.model.Vacancy
-import com.mariajuliasales.util.ValidateUtil
+import com.mariajuliasales.service.validator.VacancyValidator
+
+import static com.mariajuliasales.exception.EntityNotFoundException.requireFound
 
 class VacancyService {
 
-    private final VacancyDAO vacancyDAO
+	private static final String ENTITY_NAME = "Vaga"
 
-    VacancyService(VacancyDAO vacancyDAO) {
-        this.vacancyDAO = vacancyDAO
-    }
+	private final VacancyDAO vacancyDAO
 
-    Vacancy create(Vacancy vacancy) {
-        validate(vacancy)
-        Vacancy created = vacancyDAO.create(vacancy)
-        created?.enterprise?.addVacancy(created)
-        created
-    }
+	VacancyService(VacancyDAO vacancyDAO) {
+		this.vacancyDAO = vacancyDAO
+	}
 
-    List<Vacancy> findAll() {
-        vacancyDAO.findAll()
-    }
+	Vacancy create(Vacancy vacancy) {
+		VacancyValidator.validate(vacancy)
+		Vacancy created = vacancyDAO.create(vacancy)
+		created.enterprise.addVacancy(created)
+		created
+	}
 
-    Vacancy findById(int id) {
-        if (id <= 0) {
-            throw new IllegalArgumentException("The job opening ID must be a positive integer.")
-        }
+	List<Vacancy> findAll() {
+		vacancyDAO.findAll()
+	}
 
-        Vacancy vacancy = vacancyDAO.findById(id)
+	Vacancy findById(int id) {
+		requireFound(vacancyDAO.findById(id), ENTITY_NAME, id)
+	}
 
-        if (!vacancy) {
-            throw new IllegalArgumentException("No job opening found with the provided ID.")
-        }
+	List<Vacancy> findByEnterprise(int enterpriseId) {
+		vacancyDAO.findByEnterprise(enterpriseId)
+	}
 
-        vacancy
-    }
+	Vacancy update(Vacancy vacancy) {
+		VacancyValidator.validate(vacancy)
+		requireFound(vacancyDAO.update(vacancy), ENTITY_NAME, vacancy.id)
+	}
 
-    List<Vacancy> findByEnterprise(int enterpriseId) {
-        vacancyDAO.findByEnterprise(enterpriseId)
-    }
-
-    Vacancy update(Vacancy vacancy) {
-        validate(vacancy)
-        Vacancy updated = vacancyDAO.update(vacancy)
-        if (!updated) {
-            throw new IllegalArgumentException("No job opening found with the provided ID.")
-        }
-        updated
-    }
-
-    void delete(int id) {
-        if (!vacancyDAO.delete(id)) {
-            throw new IllegalArgumentException("No job opening found with the provided ID.")
-        }
-    }
-
-    private static void validate(Vacancy vacancy) {
-        if (!vacancy.title || vacancy.title.blank) {
-            throw new IllegalArgumentException("The job opening must have a title.")
-        }
-
-        if (!vacancy.competences || vacancy.competences.any { !(it instanceof Competence) }) {
-            throw new IllegalArgumentException("The job opening must have at least one required skill.")
-        }
-
-        if (vacancy.enterprise == null) {
-            throw new IllegalArgumentException("The job opening must be associated with a company.")
-        }
-
-        if (!vacancy.description?.trim()) {
-            throw new IllegalArgumentException("The job opening must have a description.")
-        }
-
-        if (!ValidateUtil.isValidLocation(vacancy.address)) {
-            throw new IllegalArgumentException("The job opening must have a valid city and state.")
-        }
-    }
-
+	void delete(int id) {
+		if (!vacancyDAO.delete(id)) {
+			throw new EntityNotFoundException(ENTITY_NAME, id)
+		}
+	}
 }

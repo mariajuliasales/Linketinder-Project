@@ -4,39 +4,41 @@ import com.mariajuliasales.dto.request.AddressRequest
 import com.mariajuliasales.dto.response.AddressResponse
 import com.mariajuliasales.model.Address
 
-class AddressMapper {
+final class AddressMapper {
 
-    static Address toAddress(AddressRequest request) {
+	static Address toEntity(AddressRequest request) {
+		if (request == null) {
+			return null
+		}
+		new Address(
+				cep: request.cep(),
+				street: blankToNull(request.street()),
+				number: blankToNull(request.number()),
+				complement: blankToNull(request.complement()),
+				neighborhood: blankToNull(request.neighborhood()),
+				city: request.city(),
+				state: request.state(),
+				country: request.country() ?: Address.DEFAULT_COUNTRY
+				)
+	}
 
-        if(!request)
-            throw new IllegalArgumentException("AddressRequest cannot be null")
+	static AddressResponse toResponse(Address address) {
+		if (address == null) {
+			return null
+		}
+		new AddressResponse(
+				address.cep,
+				address.street,
+				address.number,
+				address.complement,
+				address.neighborhood,
+				address.city,
+				address.state,
+				address.country
+				)
+	}
 
-        new Address(
-                cep: request.cep(),
-                street: request.street() ?: null,
-                number: request.number() ?: null,
-                complement: request.complement() ?: null,
-                neighborhood: request.neighborhood() ?: null,
-                city: request.city(),
-                state: request.state(),
-                country: request.country() ?: 'Brasil'
-        )
-    }
-
-    static AddressResponse toAddressResponse(Address address) {
-
-        if(!address)
-            throw new IllegalArgumentException("Address cannot be null")
-
-        new AddressResponse(
-                address.cep,
-                address.street,
-                address.number,
-                address.complement,
-                address.neighborhood,
-                address.city,
-                address.state,
-                address.country
-        )
-    }
+	private static String blankToNull(String value) {
+		value?.trim() ? value : null
+	}
 }
