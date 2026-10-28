@@ -2,13 +2,14 @@ package com.mariajuliasales.dao
 
 import com.mariajuliasales.model.Candidate
 import com.mariajuliasales.model.PersonType
+import com.mariajuliasales.repository.CandidateRepository
 import com.mariajuliasales.util.DocumentNormalizer
 
 import java.sql.Connection
 import java.sql.ResultSet
 import java.time.LocalDate
 
-class CandidateDAO extends PersonDAO<Candidate> {
+class CandidateDAO extends PersonDAO<Candidate> implements CandidateRepository {
 
 	private static final String SELECT_CANDIDATE = """
             SELECT candidate.id, candidate.cpf, candidate.birth_date, candidate.training, ${PERSON_COLUMNS}
@@ -18,9 +19,27 @@ class CandidateDAO extends PersonDAO<Candidate> {
 	private static final String INSERT_CANDIDATE =
 	'INSERT INTO candidate (person_id, cpf, birth_date, training) VALUES (?, ?, ?, ?) RETURNING id'
 	private static final String UPDATE_CANDIDATE = 'UPDATE candidate SET cpf = ?, birth_date = ?, training = ? WHERE id = ?'
+	private static final String WHERE_HAS_COMPETENCE = '''
+            WHERE candidate.id IN (
+                SELECT cc.candidate_id
+                FROM candidate_competence cc
+                JOIN competence co ON co.id = cc.competence_id
+                WHERE lower(co.name) = lower(?))'''
 
-	CandidateDAO(DatabaseConnection database, CompetenceDAO competenceDAO) {
-		super(database, competenceDAO)
+	CandidateDAO(ConnectionManager connectionManager, CompetenceLinkDAO competenceLinkDAO) {
+		super(connectionManager, competenceLinkDAO)
+	}
+
+	@Override
+	Candidate findByCpf(String cpf) {
+		findFirstWhere('WHERE candidate.cpf = ?', [
+			DocumentNormalizer.onlyDigits(cpf)
+		])
+	}
+
+	@Override
+	List<Candidate> findByCompetence(String competenceName) {
+		findWhere(WHERE_HAS_COMPETENCE, [competenceName?.trim()])
 	}
 
 	@Override

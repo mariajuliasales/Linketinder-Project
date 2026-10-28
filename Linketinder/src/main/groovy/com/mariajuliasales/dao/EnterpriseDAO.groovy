@@ -2,12 +2,13 @@ package com.mariajuliasales.dao
 
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.model.PersonType
+import com.mariajuliasales.repository.EnterpriseRepository
 import com.mariajuliasales.util.DocumentNormalizer
 
 import java.sql.Connection
 import java.sql.ResultSet
 
-class EnterpriseDAO extends PersonDAO<Enterprise> {
+class EnterpriseDAO extends PersonDAO<Enterprise> implements EnterpriseRepository {
 
 	private static final String SELECT_ENTERPRISE = """
             SELECT enterprise.id, enterprise.cnpj, ${PERSON_COLUMNS}
@@ -19,9 +20,16 @@ class EnterpriseDAO extends PersonDAO<Enterprise> {
 
 	private final VacancyDAO vacancyDAO
 
-	EnterpriseDAO(DatabaseConnection database, CompetenceDAO competenceDAO, VacancyDAO vacancyDAO) {
-		super(database, competenceDAO)
+	EnterpriseDAO(ConnectionManager connectionManager, CompetenceLinkDAO competenceLinkDAO, VacancyDAO vacancyDAO) {
+		super(connectionManager, competenceLinkDAO)
 		this.vacancyDAO = vacancyDAO
+	}
+
+	@Override
+	Enterprise findByCnpj(String cnpj) {
+		findFirstWhere('WHERE enterprise.cnpj = ?', [
+			DocumentNormalizer.normalizeCnpj(cnpj)
+		])
 	}
 
 	@Override

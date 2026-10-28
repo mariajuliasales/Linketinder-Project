@@ -3,11 +3,12 @@ package com.mariajuliasales.dao
 import com.mariajuliasales.model.AbstractPerson
 import com.mariajuliasales.model.Person
 import com.mariajuliasales.model.PersonType
+import com.mariajuliasales.repository.PersonRepository
 
 import java.sql.Connection
 import java.sql.ResultSet
 
-abstract class PersonDAO<T extends AbstractPerson> {
+abstract class PersonDAO<T extends AbstractPerson> implements PersonRepository<T> {
 
 	protected static final String PERSON_COLUMNS = "p.name, p.email, p.description, ${AddressDAO.COLUMNS}"
 
@@ -18,12 +19,12 @@ abstract class PersonDAO<T extends AbstractPerson> {
 	private static final String UPDATE_PERSON = 'UPDATE person SET name = ?, email = ?, description = ?, address_id = ? WHERE id = ?'
 	private static final String UPDATE_PASSWORD = "UPDATE person SET password_hash = crypt(?, gen_salt('bf')) WHERE id = ?"
 
-	protected final DatabaseConnection database
-	protected final CompetenceDAO competenceDAO
+	protected final ConnectionManager connectionManager
+	protected final CompetenceLinkDAO competenceLinkDAO
 
-	PersonDAO(DatabaseConnection database, CompetenceDAO competenceDAO) {
-		this.database = database
-		this.competenceDAO = competenceDAO
+	PersonDAO(ConnectionManager connectionManager, CompetenceLinkDAO competenceLinkDAO) {
+		this.connectionManager = connectionManager
+		this.competenceLinkDAO = competenceLinkDAO
 	}
 
 	protected abstract String getTableName()
@@ -40,8 +41,9 @@ abstract class PersonDAO<T extends AbstractPerson> {
 
 	protected abstract void updateDetails(Connection connection, T person)
 
+	@Override
 	T create(T person) {
-		database.withTransaction { Connection connection ->
+		connectionManager.withTransaction { Connection connection ->
 			int personId = insertPerson(connection, person)
 			person.id = insertDetails(connection, personId, person)
 			saveCompetences(connection, person)
@@ -49,17 +51,24 @@ abstract class PersonDAO<T extends AbstractPerson> {
 		}
 	}
 
+	@Override
 	List<T> findAll() {
 		findWhere('', [])
 	}
 
+	@Override
 	T findById(int id) {
-		List<T> found = findWhere("WHERE ${tableName}.id = ?", [id])
-		found ? found.first() : null
+		findFirstWhere("WHERE ${tableName}.id = ?", [id])
 	}
 
+	@Override
+	T findByEmail(String email) {
+		findFirstWhere('WHERE lower(p.email) = lower(?)', [email?.trim()])
+	}
+
+	@Override
 	T update(T person) {
-		database.withTransaction { Connection connection ->
+		connectionManager.withTransaction { Connection connection ->
 			Integer personId = findPersonId(connection, person.id)
 			if (personId == null) {
 				return null
@@ -71,15 +80,16 @@ abstract class PersonDAO<T extends AbstractPerson> {
 		}
 	}
 
+	@Override
 	boolean delete(int id) {
-		database.withTransaction { Connection connection ->
+		connectionManager.withTransaction { Connection connection ->
 			Integer personId = findPersonId(connection, id)
 			personId != null && SqlExecutor.update(connection, 'DELETE FROM person WHERE id = ?', [personId]) > 0
 		}
 	}
 
 	protected void loadRelations(Connection connection, T person) {
-		person.competences = competenceDAO.findLinked(connection, competenceLink, person.id)
+		person.competences = competenceLinkDAO.findLinked(connection, competenceLink, person.id)
 	}
 
 	protected static <P extends AbstractPerson> P mapPersonFields(P person, ResultSet row) {
@@ -92,12 +102,17 @@ abstract class PersonDAO<T extends AbstractPerson> {
 
 	// protected, e não private: no Groovy, closures da classe-pai não enxergam métodos private quando o objeto é uma subclasse
 	protected List<T> findWhere(String condition, List<?> parameters) {
-		database.withConnection { Connection connection ->
+		connectionManager.withConnection { Connection connection ->
 			String sql = "${selectSql} ${condition} ORDER BY ${tableName}.id"
 			List<T> people = SqlExecutor.query(connection, sql, parameters) { ResultSet row -> mapRow(row) }
 			people.each { T person -> loadRelations(connection, person) }
 			people
 		}
+	}
+
+	protected T findFirstWhere(String condition, List<?> parameters) {
+		List<T> found = findWhere(condition, parameters)
+		found ? found.first() : null
 	}
 
 	protected int insertPerson(Connection connection, Person person) {
@@ -134,6 +149,6 @@ abstract class PersonDAO<T extends AbstractPerson> {
 	}
 
 	protected void saveCompetences(Connection connection, T person) {
-		competenceDAO.replaceLinks(connection, competenceLink, person.id, person.competences)
+		competenceLinkDAO.replaceLinks(connection, competenceLink, person.id, person.competences)
 	}
 }
