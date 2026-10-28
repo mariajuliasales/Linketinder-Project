@@ -1,49 +1,26 @@
 package com.mariajuliasales.service
 
-import com.mariajuliasales.dao.VacancyDAO
-import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.model.Vacancy
-import com.mariajuliasales.service.validator.VacancyValidator
+import com.mariajuliasales.repository.VacancyRepository
+import com.mariajuliasales.service.validator.Validator
 
-import static com.mariajuliasales.exception.EntityNotFoundException.requireFound
+class VacancyService extends CrudService<Vacancy> {
 
-class VacancyService {
+	private final VacancyRepository vacancyRepository
 
-	private static final String ENTITY_NAME = "Vaga"
-
-	private final VacancyDAO vacancyDAO
-
-	VacancyService(VacancyDAO vacancyDAO) {
-		this.vacancyDAO = vacancyDAO
+	VacancyService(VacancyRepository repository, Validator<Vacancy> validator) {
+		super(repository, validator, 'Vaga')
+		this.vacancyRepository = repository
 	}
 
+	@Override
 	Vacancy create(Vacancy vacancy) {
-		VacancyValidator.validate(vacancy)
-		Vacancy created = vacancyDAO.create(vacancy)
+		Vacancy created = super.create(vacancy)
 		created.enterprise.addVacancy(created)
 		created
 	}
 
-	List<Vacancy> findAll() {
-		vacancyDAO.findAll()
-	}
-
-	Vacancy findById(int id) {
-		requireFound(vacancyDAO.findById(id), ENTITY_NAME, id)
-	}
-
 	List<Vacancy> findByEnterprise(int enterpriseId) {
-		vacancyDAO.findByEnterprise(enterpriseId)
-	}
-
-	Vacancy update(Vacancy vacancy) {
-		VacancyValidator.validate(vacancy)
-		requireFound(vacancyDAO.update(vacancy), ENTITY_NAME, vacancy.id)
-	}
-
-	void delete(int id) {
-		if (!vacancyDAO.delete(id)) {
-			throw new EntityNotFoundException(ENTITY_NAME, id)
-		}
+		vacancyRepository.findByEnterprise(enterpriseId)
 	}
 }

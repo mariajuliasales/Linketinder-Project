@@ -1,17 +1,19 @@
 package com.mariajuliasales.service
 
-import com.mariajuliasales.dao.CandidateDAO
 import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.exception.ValidationException
 import com.mariajuliasales.model.Candidate
+import com.mariajuliasales.repository.CandidateRepository
+import com.mariajuliasales.service.validator.CandidateValidator
+import com.mariajuliasales.service.validator.PersonValidator
 import spock.lang.Specification
 
 import static com.mariajuliasales.fixture.TestData.validCandidate
 
 class CandidateServiceSpec extends Specification {
 
-	CandidateDAO candidateDAO = Mock(CandidateDAO)
-	CandidateService candidateService = new CandidateService(candidateDAO)
+	CandidateRepository candidateRepository = Mock()
+	CandidateService candidateService = new CandidateService(candidateRepository, new CandidateValidator(new PersonValidator()))
 
 	def "create should save a valid candidate"() {
 		given:
@@ -21,7 +23,7 @@ class CandidateServiceSpec extends Specification {
 		Candidate result = candidateService.create(candidate)
 
 		then:
-		1 * candidateDAO.create(candidate) >> candidate
+		1 * candidateRepository.create(candidate) >> candidate
 		result == candidate
 	}
 
@@ -31,7 +33,7 @@ class CandidateServiceSpec extends Specification {
 
 		then:
 		thrown(ValidationException)
-		0 * candidateDAO.create(_)
+		0 * candidateRepository.create(_)
 	}
 
 	def "create should require a password"() {
@@ -40,25 +42,25 @@ class CandidateServiceSpec extends Specification {
 
 		then:
 		thrown(ValidationException)
-		0 * candidateDAO.create(_)
+		0 * candidateRepository.create(_)
 	}
 
-	def "find all should return the candidates from the DAO"() {
+	def "find all should return the candidates from the repository"() {
 		given:
 		List<Candidate> candidates = [
 			validCandidate(id: 1),
 			validCandidate(id: 2)
 		]
-		candidateDAO.findAll() >> candidates
+		candidateRepository.findAll() >> candidates
 
 		expect:
 		candidateService.findAll() == candidates
 	}
 
-	def "find by id should return the candidate from the DAO"() {
+	def "find by id should return the candidate from the repository"() {
 		given:
 		Candidate candidate = validCandidate(id: 10)
-		candidateDAO.findById(10) >> candidate
+		candidateRepository.findById(10) >> candidate
 
 		expect:
 		candidateService.findById(10) == candidate
@@ -66,7 +68,7 @@ class CandidateServiceSpec extends Specification {
 
 	def "find by id should fail when the candidate does not exist"() {
 		given:
-		candidateDAO.findById(99) >> null
+		candidateRepository.findById(99) >> null
 
 		when:
 		candidateService.findById(99)
@@ -84,7 +86,7 @@ class CandidateServiceSpec extends Specification {
 		Candidate result = candidateService.update(candidate)
 
 		then:
-		1 * candidateDAO.update(candidate) >> candidate
+		1 * candidateRepository.update(candidate) >> candidate
 		result == candidate
 	}
 
@@ -94,12 +96,12 @@ class CandidateServiceSpec extends Specification {
 
 		then:
 		thrown(ValidationException)
-		0 * candidateDAO.update(_)
+		0 * candidateRepository.update(_)
 	}
 
 	def "update should fail when the candidate does not exist"() {
 		given:
-		candidateDAO.update(_) >> null
+		candidateRepository.update(_) >> null
 
 		when:
 		candidateService.update(validCandidate(id: 99))
@@ -109,17 +111,17 @@ class CandidateServiceSpec extends Specification {
 		exception.message == "Candidato com ID 99 não existe"
 	}
 
-	def "delete should remove the candidate through the DAO"() {
+	def "delete should remove the candidate through the repository"() {
 		when:
 		candidateService.delete(1)
 
 		then:
-		1 * candidateDAO.delete(1) >> true
+		1 * candidateRepository.delete(1) >> true
 	}
 
 	def "delete should fail when the candidate does not exist"() {
 		given:
-		candidateDAO.delete(99) >> false
+		candidateRepository.delete(99) >> false
 
 		when:
 		candidateService.delete(99)
