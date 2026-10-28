@@ -4,38 +4,24 @@ import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.SQLException
 
-class DatabaseConnection {
+class DatabaseConnection implements ConnectionManager {
 
-	private static final String DEFAULT_URL = 'jdbc:postgresql://localhost:5432/linketinder'
-	private static final String DEFAULT_USER = 'postgres'
-	private static final String DEFAULT_PASSWORD = 'postgres'
+	final DatabaseConfig config
 
-	final String url
-	final String user
-	final String password
-
-	DatabaseConnection(
-	String url = System.getenv('DB_URL') ?: DEFAULT_URL,
-	String user = System.getenv('DB_USER') ?: DEFAULT_USER,
-	String password = System.getenv('DB_PASSWORD') ?: DEFAULT_PASSWORD
-	) {
-		this.url = url
-		this.user = user
-		this.password = password
+	DatabaseConnection(DatabaseConfig config) {
+		this.config = config
 	}
 
-	Connection getConnection() {
-		DriverManager.getConnection(url, user, password)
-	}
-
+	@Override
 	def <T> T withConnection(Closure<T> work) {
 		try {
-			getConnection().withCloseable { Connection connection -> work(connection) }
+			openConnection().withCloseable { Connection connection -> work(connection) }
 		} catch (SQLException exception) {
 			throw SqlExceptionTranslator.translate(exception)
 		}
 	}
 
+	@Override
 	def <T> T withTransaction(Closure<T> work) {
 		withConnection { Connection connection ->
 			connection.autoCommit = false
@@ -48,6 +34,10 @@ class DatabaseConnection {
 				throw exception
 			}
 		}
+	}
+
+	private Connection openConnection() {
+		DriverManager.getConnection(config.url, config.user, config.password)
 	}
 
 	private static void rollback(Connection connection, Exception cause) {
