@@ -1,19 +1,28 @@
 package com.mariajuliasales.service.validator
 
 import com.mariajuliasales.model.Enterprise
+import com.mariajuliasales.model.Person
 import com.mariajuliasales.util.CnpjValidator
 
 import static com.mariajuliasales.service.validator.Validation.require
 
-final class EnterpriseValidator {
+class EnterpriseValidator implements Validator<Enterprise> {
 
-	static void validateForCreate(Enterprise enterprise) {
-		PersonValidator.validateForCreate(enterprise)
+	private final Validator<Person> personValidator
+
+	EnterpriseValidator(Validator<Person> personValidator) {
+		this.personValidator = personValidator
+	}
+
+	@Override
+	void validateForCreate(Enterprise enterprise) {
+		personValidator.validateForCreate(enterprise)
 		validateEnterpriseFields(enterprise)
 	}
 
-	static void validateForUpdate(Enterprise enterprise) {
-		PersonValidator.validateForUpdate(enterprise)
+	@Override
+	void validateForUpdate(Enterprise enterprise) {
+		personValidator.validateForUpdate(enterprise)
 		validateEnterpriseFields(enterprise)
 	}
 

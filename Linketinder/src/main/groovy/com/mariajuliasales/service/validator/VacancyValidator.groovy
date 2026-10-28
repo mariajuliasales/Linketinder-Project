@@ -7,9 +7,19 @@ import com.mariajuliasales.util.AddressValidator
 import static com.mariajuliasales.service.validator.Validation.hasText
 import static com.mariajuliasales.service.validator.Validation.require
 
-final class VacancyValidator {
+class VacancyValidator implements Validator<Vacancy> {
 
-	static void validate(Vacancy vacancy) {
+	@Override
+	void validateForCreate(Vacancy vacancy) {
+		validate(vacancy)
+	}
+
+	@Override
+	void validateForUpdate(Vacancy vacancy) {
+		validate(vacancy)
+	}
+
+	private static void validate(Vacancy vacancy) {
 		require(vacancy != null, "Dados da vaga não informados")
 		require(hasText(vacancy.title), "Título da vaga é obrigatório")
 		require(hasText(vacancy.description), "Descrição da vaga é obrigatória")
