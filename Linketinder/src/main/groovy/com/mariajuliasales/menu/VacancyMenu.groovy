@@ -5,20 +5,20 @@ import com.mariajuliasales.mapper.VacancyMapper
 import com.mariajuliasales.model.Address
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.model.Vacancy
-import com.mariajuliasales.service.EnterpriseService
+import com.mariajuliasales.service.EntityFinder
 import com.mariajuliasales.service.VacancyService
 
 class VacancyMenu extends Menu {
 
 	private final VacancyService vacancyService
-	private final EnterpriseService enterpriseService
+	private final EntityFinder<Enterprise> enterpriseFinder
 	private final CompetenceForm competenceForm
 
-	VacancyMenu(ConsoleInput input, VacancyService vacancyService, EnterpriseService enterpriseService,
+	VacancyMenu(ConsoleInput input, ConsoleView view, VacancyService vacancyService, EntityFinder<Enterprise> enterpriseFinder,
 	CompetenceForm competenceForm) {
-		super('Vagas', input)
+		super('Vagas', input, view)
 		this.vacancyService = vacancyService
-		this.enterpriseService = enterpriseService
+		this.enterpriseFinder = enterpriseFinder
 		this.competenceForm = competenceForm
 	}
 
@@ -39,12 +39,12 @@ class VacancyMenu extends Menu {
 
 	private void listEnterpriseVacancies() {
 		Enterprise enterprise = findEnterprise()
-		View.showMessage("Vagas da empresa ${enterprise.name}:")
+		view.showMessage("Vagas da empresa ${enterprise.name}:")
 		showVacancies(enterprise.vacancies)
 	}
 
 	private void createVacancy() {
-		View.showMessage('Criando nova vaga...')
+		view.showMessage('Criando nova vaga...')
 		Enterprise enterprise = findEnterprise()
 		VacancyRequest request = new VacancyRequest(
 				input.readText('Digite o título da vaga:'),
@@ -55,12 +55,12 @@ class VacancyMenu extends Menu {
 				competenceForm.read('Digite as competências requeridas (separadas por vírgula):', [])*.name
 				)
 		Vacancy vacancy = vacancyService.create(VacancyMapper.toEntity(request, enterprise))
-		View.showMessage("Vaga criada com sucesso! ID: ${vacancy.id}")
+		view.showMessage("Vaga criada com sucesso! ID: ${vacancy.id}")
 	}
 
 	private void updateVacancy() {
 		Vacancy vacancy = vacancyService.findById(input.readInt('Digite o ID da vaga:'))
-		View.showMessage('Atualizando vaga (Enter mantém o valor atual)...')
+		view.showMessage('Atualizando vaga (Enter mantém o valor atual)...')
 		vacancy.title = input.readText('Título', vacancy.title)
 		vacancy.description = input.readText('Descrição', vacancy.description)
 		vacancy.address = new Address(
@@ -71,22 +71,22 @@ class VacancyMenu extends Menu {
 		vacancy.competences = competenceForm.read('Competências', vacancy.competences)
 
 		vacancyService.update(vacancy)
-		View.showMessage('Vaga atualizada com sucesso!')
+		view.showMessage('Vaga atualizada com sucesso!')
 	}
 
 	private void deleteVacancy() {
 		vacancyService.delete(input.readInt('Digite o ID da vaga a excluir:'))
-		View.showMessage('Vaga excluída com sucesso!')
+		view.showMessage('Vaga excluída com sucesso!')
 	}
 
 	private Enterprise findEnterprise() {
-		enterpriseService.findById(input.readInt('Digite o ID da empresa:'))
+		enterpriseFinder.findById(input.readInt('Digite o ID da empresa:'))
 	}
 
-	private static void showVacancies(List<Vacancy> vacancies) {
+	private void showVacancies(List<Vacancy> vacancies) {
 		List<String> lines = vacancies.collect { Vacancy vacancy ->
-			View.formatVacancy(VacancyMapper.toAnonymousResponse(vacancy))
+			ResponseFormatter.formatVacancy(VacancyMapper.toAnonymousResponse(vacancy))
 		}
-		View.showAll(lines, 'Nenhuma vaga cadastrada.')
+		view.showAll(lines, 'Nenhuma vaga cadastrada.')
 	}
 }

@@ -6,13 +6,15 @@ import com.mariajuliasales.model.Address
 class AddressForm {
 
 	private final ConsoleInput input
+	private final ConsoleView view
 
-	AddressForm(ConsoleInput input) {
+	AddressForm(ConsoleInput input, ConsoleView view) {
 		this.input = input
+		this.view = view
 	}
 
 	AddressRequest read(String title, Address current) {
-		println title
+		view.showMessage(title)
 		new AddressRequest(
 				input.readText('CEP', current?.cep),
 				input.readText('Rua (opcional)', current?.street),

@@ -7,41 +7,7 @@ import com.mariajuliasales.dto.response.EnterpriseAnonymousResponse
 import com.mariajuliasales.dto.response.EnterpriseResponse
 import com.mariajuliasales.dto.response.VacancyAnonymousResponse
 
-class View {
-
-	static void showMainMenu(List<String> labels) {
-		println ''
-		println 'Bem vindo(a) ao LinkeTinder!'
-		println 'Escolha uma opção:'
-		showNumbered(labels)
-		println '0. Sair do programa.'
-	}
-
-	static void showSubmenu(String title, List<String> labels) {
-		println ''
-		println "--- ${title} ---"
-		showNumbered(labels)
-		println '0. Voltar'
-	}
-
-	static void showAll(List<String> lines, String emptyMessage) {
-		if (lines.isEmpty()) {
-			println emptyMessage
-		}
-		lines.each { String line -> println line }
-	}
-
-	static void showMessage(String message) {
-		println message
-	}
-
-	static void showError(String message) {
-		println "Erro: ${message}"
-	}
-
-	static void showInvalidOption() {
-		println 'Opção inválida. Por favor, tente novamente.'
-	}
+final class ResponseFormatter {
 
 	static String formatCandidate(CandidateResponse candidate) {
 		"Perfil do Candidato ${candidate.id()}: Nome: ${candidate.name()} | Email: ${candidate.email()} | " +
@@ -93,9 +59,5 @@ class View {
 		String cityLine = "${address.city()}/${address.state()} - ${address.country()}"
 		String cepLine = address.cep() ? "CEP ${address.cep()}" : null
 		[streetLine, cityLine, cepLine].findAll().join(', ')
-	}
-
-	private static void showNumbered(List<String> labels) {
-		labels.eachWithIndex { String label, int index -> println "${index + 1}. ${label}" }
 	}
 }

@@ -12,9 +12,9 @@ class CandidateMenu extends Menu {
 	private final AddressForm addressForm
 	private final CompetenceForm competenceForm
 
-	CandidateMenu(ConsoleInput input, CandidateService candidateService, AddressForm addressForm,
+	CandidateMenu(ConsoleInput input, ConsoleView view, CandidateService candidateService, AddressForm addressForm,
 	CompetenceForm competenceForm) {
-		super('Candidatos', input)
+		super('Candidatos', input, view)
 		this.candidateService = candidateService
 		this.addressForm = addressForm
 		this.competenceForm = competenceForm
@@ -33,17 +33,17 @@ class CandidateMenu extends Menu {
 
 	private void listCandidates() {
 		List<String> profiles = candidateService.findAll().collect { Candidate candidate ->
-			View.formatAnonymousCandidate(CandidateMapper.toAnonymousResponse(candidate))
+			ResponseFormatter.formatAnonymousCandidate(CandidateMapper.toAnonymousResponse(candidate))
 		}
-		View.showAll(profiles, 'Nenhum candidato cadastrado.')
+		view.showAll(profiles, 'Nenhum candidato cadastrado.')
 	}
 
 	private void showCandidate() {
-		View.showMessage(View.formatCandidate(CandidateMapper.toResponse(findCandidate())))
+		view.showMessage(ResponseFormatter.formatCandidate(CandidateMapper.toResponse(findCandidate())))
 	}
 
 	private void createCandidate() {
-		View.showMessage('Criando novo candidato...')
+		view.showMessage('Criando novo candidato...')
 		CandidateRequest request = new CandidateRequest(
 				input.readText('Digite o nome do candidato:'),
 				input.readText('Digite o email do candidato:'),
@@ -56,12 +56,12 @@ class CandidateMenu extends Menu {
 				input.readText('Digite a formação do candidato:')
 				)
 		Candidate candidate = candidateService.create(CandidateMapper.toEntity(request))
-		View.showMessage("Candidato criado com sucesso! ID: ${candidate.id}")
+		view.showMessage("Candidato criado com sucesso! ID: ${candidate.id}")
 	}
 
 	private void updateCandidate() {
 		Candidate candidate = findCandidate()
-		View.showMessage('Atualizando candidato (Enter mantém o valor atual)...')
+		view.showMessage('Atualizando candidato (Enter mantém o valor atual)...')
 		candidate.name = input.readText('Nome', candidate.name)
 		candidate.email = input.readText('Email', candidate.email)
 		candidate.password = input.readText('Nova senha (Enter mantém a atual):')
@@ -73,12 +73,12 @@ class CandidateMenu extends Menu {
 		candidate.competences = competenceForm.read('Competências', candidate.competences)
 
 		candidateService.update(candidate)
-		View.showMessage('Candidato atualizado com sucesso!')
+		view.showMessage('Candidato atualizado com sucesso!')
 	}
 
 	private void deleteCandidate() {
 		candidateService.delete(input.readInt('Digite o ID do candidato a excluir:'))
-		View.showMessage('Candidato excluído com sucesso!')
+		view.showMessage('Candidato excluído com sucesso!')
 	}
 
 	private Candidate findCandidate() {
