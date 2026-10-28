@@ -3,11 +3,12 @@ package com.mariajuliasales.dao
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.model.VacancyStatus
+import com.mariajuliasales.repository.VacancyRepository
 
 import java.sql.Connection
 import java.sql.ResultSet
 
-class VacancyDAO {
+class VacancyDAO implements VacancyRepository {
 
 	private static final String SELECT_VACANCY = """
             SELECT v.id, v.title, v.description, v.status, ${AddressDAO.COLUMNS},
@@ -27,16 +28,17 @@ class VacancyDAO {
 	private static final String WHERE_ID = 'WHERE v.id = ?'
 	private static final String WHERE_ENTERPRISE = 'WHERE v.enterprise_id = ?'
 
-	private final DatabaseConnection database
-	private final CompetenceDAO competenceDAO
+	private final ConnectionManager connectionManager
+	private final CompetenceLinkDAO competenceLinkDAO
 
-	VacancyDAO(DatabaseConnection database, CompetenceDAO competenceDAO) {
-		this.database = database
-		this.competenceDAO = competenceDAO
+	VacancyDAO(ConnectionManager connectionManager, CompetenceLinkDAO competenceLinkDAO) {
+		this.connectionManager = connectionManager
+		this.competenceLinkDAO = competenceLinkDAO
 	}
 
+	@Override
 	Vacancy create(Vacancy vacancy) {
-		database.withTransaction { Connection connection ->
+		connectionManager.withTransaction { Connection connection ->
 			int addressId = AddressDAO.insert(connection, vacancy.address)
 			vacancy.id = SqlExecutor.insertReturningId(connection, INSERT_VACANCY,
 					[
@@ -51,27 +53,31 @@ class VacancyDAO {
 		}
 	}
 
+	@Override
 	List<Vacancy> findAll() {
-		database.withConnection { Connection connection -> findWhere(connection, '', []) }
+		connectionManager.withConnection { Connection connection -> findWhere(connection, '', []) }
 	}
 
+	@Override
 	Vacancy findById(int id) {
-		database.withConnection { Connection connection ->
+		connectionManager.withConnection { Connection connection ->
 			List<Vacancy> found = findWhere(connection, WHERE_ID, [id])
 			found ? found.first() : null
 		}
 	}
 
+	@Override
 	List<Vacancy> findByEnterprise(int enterpriseId) {
-		database.withConnection { Connection connection -> findByEnterprise(connection, enterpriseId) }
+		connectionManager.withConnection { Connection connection -> findByEnterprise(connection, enterpriseId) }
 	}
 
 	List<Vacancy> findByEnterprise(Connection connection, int enterpriseId) {
 		findWhere(connection, WHERE_ENTERPRISE, [enterpriseId])
 	}
 
+	@Override
 	Vacancy update(Vacancy vacancy) {
-		database.withTransaction { Connection connection ->
+		connectionManager.withTransaction { Connection connection ->
 			if (!exists(connection, vacancy.id)) {
 				return null
 			}
@@ -89,8 +95,9 @@ class VacancyDAO {
 		}
 	}
 
+	@Override
 	boolean delete(int id) {
-		database.withConnection { Connection connection ->
+		connectionManager.withConnection { Connection connection ->
 			SqlExecutor.update(connection, 'DELETE FROM vacancy WHERE id = ?', [id]) > 0
 		}
 	}
@@ -106,7 +113,7 @@ class VacancyDAO {
 	}
 
 	private void saveCompetences(Connection connection, Vacancy vacancy) {
-		competenceDAO.replaceLinks(connection, CompetenceLink.VACANCY, vacancy.id, vacancy.competences)
+		competenceLinkDAO.replaceLinks(connection, CompetenceLink.VACANCY, vacancy.id, vacancy.competences)
 	}
 
 	private List<Vacancy> findWhere(Connection connection, String condition, List<?> parameters) {
@@ -116,7 +123,7 @@ class VacancyDAO {
 			mapRow(row, enterprisesById)
 		}
 		vacancies.each { Vacancy vacancy ->
-			vacancy.competences = competenceDAO.findLinked(connection, CompetenceLink.VACANCY, vacancy.id)
+			vacancy.competences = competenceLinkDAO.findLinked(connection, CompetenceLink.VACANCY, vacancy.id)
 		}
 		vacancies
 	}

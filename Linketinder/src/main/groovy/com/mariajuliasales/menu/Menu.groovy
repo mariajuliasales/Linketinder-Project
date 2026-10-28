@@ -8,18 +8,20 @@ abstract class Menu {
 
 	private static final int EXIT_OPTION = 0
 
-	protected final String title
+	final String title
 	protected final ConsoleInput input
+	protected final ConsoleView view
 
-	Menu(String title, ConsoleInput input) {
+	Menu(String title, ConsoleInput input, ConsoleView view) {
 		this.title = title
 		this.input = input
+		this.view = view
 	}
 
 	protected abstract List<MenuOption> getOptions()
 
 	protected void showOptions(List<String> labels) {
-		View.showSubmenu(title, labels)
+		view.showSubmenu(title, labels)
 	}
 
 	protected void onExit() {
@@ -42,17 +44,17 @@ abstract class Menu {
 			if (choice == EXIT_OPTION || choice in 1..options.size()) {
 				return choice
 			}
-			View.showInvalidOption()
+			view.showInvalidOption()
 		}
 	}
 
-	private static void execute(MenuOption option) {
+	private void execute(MenuOption option) {
 		try {
 			option.action().call()
 		} catch (BusinessException exception) {
-			View.showError(exception.message)
+			view.showError(exception.message)
 		} catch (SQLException exception) {
-			View.showError("Falha no banco de dados: ${exception.message}")
+			view.showError("Falha no banco de dados: ${exception.message}")
 		}
 	}
 }

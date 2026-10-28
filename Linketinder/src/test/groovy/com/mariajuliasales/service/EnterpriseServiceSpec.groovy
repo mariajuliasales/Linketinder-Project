@@ -1,17 +1,19 @@
 package com.mariajuliasales.service
 
-import com.mariajuliasales.dao.EnterpriseDAO
 import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.exception.ValidationException
 import com.mariajuliasales.model.Enterprise
+import com.mariajuliasales.repository.EnterpriseRepository
+import com.mariajuliasales.service.validator.EnterpriseValidator
+import com.mariajuliasales.service.validator.PersonValidator
 import spock.lang.Specification
 
 import static com.mariajuliasales.fixture.TestData.validEnterprise
 
 class EnterpriseServiceSpec extends Specification {
 
-	EnterpriseDAO enterpriseDAO = Mock(EnterpriseDAO)
-	EnterpriseService enterpriseService = new EnterpriseService(enterpriseDAO)
+	EnterpriseRepository enterpriseRepository = Mock()
+	EnterpriseService enterpriseService = new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator()))
 
 	def "create should save a valid enterprise"() {
 		given:
@@ -21,7 +23,7 @@ class EnterpriseServiceSpec extends Specification {
 		Enterprise result = enterpriseService.create(enterprise)
 
 		then:
-		1 * enterpriseDAO.create(enterprise) >> enterprise
+		1 * enterpriseRepository.create(enterprise) >> enterprise
 		result == enterprise
 	}
 
@@ -31,7 +33,7 @@ class EnterpriseServiceSpec extends Specification {
 
 		then:
 		thrown(ValidationException)
-		0 * enterpriseDAO.create(_)
+		0 * enterpriseRepository.create(_)
 	}
 
 	def "create should require a password"() {
@@ -40,25 +42,25 @@ class EnterpriseServiceSpec extends Specification {
 
 		then:
 		thrown(ValidationException)
-		0 * enterpriseDAO.create(_)
+		0 * enterpriseRepository.create(_)
 	}
 
-	def "find all should return the enterprises from the DAO"() {
+	def "find all should return the enterprises from the repository"() {
 		given:
 		List<Enterprise> enterprises = [
 			validEnterprise(id: 1),
 			validEnterprise(id: 2, email: "rh@inovacaodigital.io")
 		]
-		enterpriseDAO.findAll() >> enterprises
+		enterpriseRepository.findAll() >> enterprises
 
 		expect:
 		enterpriseService.findAll() == enterprises
 	}
 
-	def "find by id should return the enterprise from the DAO"() {
+	def "find by id should return the enterprise from the repository"() {
 		given:
 		Enterprise enterprise = validEnterprise(id: 10)
-		enterpriseDAO.findById(10) >> enterprise
+		enterpriseRepository.findById(10) >> enterprise
 
 		expect:
 		enterpriseService.findById(10) == enterprise
@@ -66,7 +68,7 @@ class EnterpriseServiceSpec extends Specification {
 
 	def "find by id should fail when the enterprise does not exist"() {
 		given:
-		enterpriseDAO.findById(99) >> null
+		enterpriseRepository.findById(99) >> null
 
 		when:
 		enterpriseService.findById(99)
@@ -84,7 +86,7 @@ class EnterpriseServiceSpec extends Specification {
 		Enterprise result = enterpriseService.update(enterprise)
 
 		then:
-		1 * enterpriseDAO.update(enterprise) >> enterprise
+		1 * enterpriseRepository.update(enterprise) >> enterprise
 		result == enterprise
 	}
 
@@ -94,12 +96,12 @@ class EnterpriseServiceSpec extends Specification {
 
 		then:
 		thrown(ValidationException)
-		0 * enterpriseDAO.update(_)
+		0 * enterpriseRepository.update(_)
 	}
 
 	def "update should fail when the enterprise does not exist"() {
 		given:
-		enterpriseDAO.update(_) >> null
+		enterpriseRepository.update(_) >> null
 
 		when:
 		enterpriseService.update(validEnterprise(id: 99))
@@ -109,17 +111,17 @@ class EnterpriseServiceSpec extends Specification {
 		exception.message == "Empresa com ID 99 não existe"
 	}
 
-	def "delete should remove the enterprise through the DAO"() {
+	def "delete should remove the enterprise through the repository"() {
 		when:
 		enterpriseService.delete(1)
 
 		then:
-		1 * enterpriseDAO.delete(1) >> true
+		1 * enterpriseRepository.delete(1) >> true
 	}
 
 	def "delete should fail when the enterprise does not exist"() {
 		given:
-		enterpriseDAO.delete(99) >> false
+		enterpriseRepository.delete(99) >> false
 
 		when:
 		enterpriseService.delete(99)

@@ -1,6 +1,8 @@
 package com.mariajuliasales.service.validator
 
 import com.mariajuliasales.exception.ValidationException
+import com.mariajuliasales.model.Candidate
+import com.mariajuliasales.model.Person
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -8,9 +10,11 @@ import static com.mariajuliasales.fixture.TestData.validCandidate
 
 class CandidateValidatorSpec extends Specification {
 
+	CandidateValidator validator = new CandidateValidator(new PersonValidator())
+
 	def "valid candidate should pass"() {
 		when:
-		CandidateValidator.validateForCreate(validCandidate())
+		validator.validateForCreate(validCandidate())
 
 		then:
 		noExceptionThrown()
@@ -18,7 +22,7 @@ class CandidateValidatorSpec extends Specification {
 
 	def "candidate validation should include the common person rules"() {
 		when:
-		CandidateValidator.validateForCreate(validCandidate(email: "invalid"))
+		validator.validateForCreate(validCandidate(email: "invalid"))
 
 		then:
 		ValidationException exception = thrown()
@@ -28,7 +32,7 @@ class CandidateValidatorSpec extends Specification {
 	@Unroll
 	def "candidate with invalid cpf '#cpf' should fail"() {
 		when:
-		CandidateValidator.validateForCreate(validCandidate(cpf: cpf))
+		validator.validateForCreate(validCandidate(cpf: cpf))
 
 		then:
 		ValidationException exception = thrown()
@@ -46,7 +50,7 @@ class CandidateValidatorSpec extends Specification {
 	@Unroll
 	def "candidate with invalid #field should fail with '#message'"() {
 		when:
-		CandidateValidator.validateForUpdate(validCandidate([(field): value]))
+		validator.validateForUpdate(validCandidate([(field): value]))
 
 		then:
 		ValidationException exception = thrown()
@@ -57,5 +61,20 @@ class CandidateValidatorSpec extends Specification {
 		"birthDate" | null  || "Data de nascimento é obrigatória"
 		"training"  | " "   || "Formação é obrigatória"
 		"training"  | null  || "Formação é obrigatória"
+	}
+
+	def "common person rules should be delegated to the injected person validator"() {
+		given:
+		Validator<Person> personValidator = Mock()
+		CandidateValidator candidateValidator = new CandidateValidator(personValidator)
+		Candidate candidate = validCandidate()
+
+		when:
+		candidateValidator.validateForCreate(candidate)
+		candidateValidator.validateForUpdate(candidate)
+
+		then:
+		1 * personValidator.validateForCreate(candidate)
+		1 * personValidator.validateForUpdate(candidate)
 	}
 }

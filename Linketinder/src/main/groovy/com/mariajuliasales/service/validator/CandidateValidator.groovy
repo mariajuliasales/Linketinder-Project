@@ -1,20 +1,29 @@
 package com.mariajuliasales.service.validator
 
 import com.mariajuliasales.model.Candidate
+import com.mariajuliasales.model.Person
 import com.mariajuliasales.util.CpfValidator
 
 import static com.mariajuliasales.service.validator.Validation.hasText
 import static com.mariajuliasales.service.validator.Validation.require
 
-final class CandidateValidator {
+class CandidateValidator implements Validator<Candidate> {
 
-	static void validateForCreate(Candidate candidate) {
-		PersonValidator.validateForCreate(candidate)
+	private final Validator<Person> personValidator
+
+	CandidateValidator(Validator<Person> personValidator) {
+		this.personValidator = personValidator
+	}
+
+	@Override
+	void validateForCreate(Candidate candidate) {
+		personValidator.validateForCreate(candidate)
 		validateCandidateFields(candidate)
 	}
 
-	static void validateForUpdate(Candidate candidate) {
-		PersonValidator.validateForUpdate(candidate)
+	@Override
+	void validateForUpdate(Candidate candidate) {
+		personValidator.validateForUpdate(candidate)
 		validateCandidateFields(candidate)
 	}
 

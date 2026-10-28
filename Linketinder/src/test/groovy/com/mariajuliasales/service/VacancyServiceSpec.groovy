@@ -1,10 +1,11 @@
 package com.mariajuliasales.service
 
-import com.mariajuliasales.dao.VacancyDAO
 import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.exception.ValidationException
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.model.Vacancy
+import com.mariajuliasales.repository.VacancyRepository
+import com.mariajuliasales.service.validator.VacancyValidator
 import spock.lang.Specification
 
 import static com.mariajuliasales.fixture.TestData.validEnterprise
@@ -12,8 +13,8 @@ import static com.mariajuliasales.fixture.TestData.validVacancy
 
 class VacancyServiceSpec extends Specification {
 
-	VacancyDAO vacancyDAO = Mock(VacancyDAO)
-	VacancyService vacancyService = new VacancyService(vacancyDAO)
+	VacancyRepository vacancyRepository = Mock()
+	VacancyService vacancyService = new VacancyService(vacancyRepository, new VacancyValidator())
 
 	def "create should save a valid vacancy"() {
 		given:
@@ -23,7 +24,7 @@ class VacancyServiceSpec extends Specification {
 		Vacancy result = vacancyService.create(vacancy)
 
 		then:
-		1 * vacancyDAO.create(vacancy) >> vacancy
+		1 * vacancyRepository.create(vacancy) >> vacancy
 		result == vacancy
 	}
 
@@ -31,7 +32,7 @@ class VacancyServiceSpec extends Specification {
 		given:
 		Enterprise enterprise = validEnterprise()
 		Vacancy vacancy = validVacancy(enterprise: enterprise)
-		vacancyDAO.create(vacancy) >> vacancy
+		vacancyRepository.create(vacancy) >> vacancy
 
 		when:
 		vacancyService.create(vacancy)
@@ -47,16 +48,16 @@ class VacancyServiceSpec extends Specification {
 
 		then:
 		thrown(ValidationException)
-		0 * vacancyDAO.create(_)
+		0 * vacancyRepository.create(_)
 	}
 
-	def "find all should return the vacancies from the DAO"() {
+	def "find all should return the vacancies from the repository"() {
 		given:
 		List<Vacancy> vacancies = [
 			validVacancy(id: 1),
 			validVacancy(id: 2)
 		]
-		vacancyDAO.findAll() >> vacancies
+		vacancyRepository.findAll() >> vacancies
 
 		expect:
 		vacancyService.findAll() == vacancies
@@ -64,16 +65,16 @@ class VacancyServiceSpec extends Specification {
 
 	def "find all should return an empty list when there are no vacancies"() {
 		given:
-		vacancyDAO.findAll() >> []
+		vacancyRepository.findAll() >> []
 
 		expect:
 		vacancyService.findAll().isEmpty()
 	}
 
-	def "find by id should return the vacancy from the DAO"() {
+	def "find by id should return the vacancy from the repository"() {
 		given:
 		Vacancy vacancy = validVacancy(id: 10)
-		vacancyDAO.findById(10) >> vacancy
+		vacancyRepository.findById(10) >> vacancy
 
 		expect:
 		vacancyService.findById(10) == vacancy
@@ -81,7 +82,7 @@ class VacancyServiceSpec extends Specification {
 
 	def "find by id should fail when the vacancy does not exist"() {
 		given:
-		vacancyDAO.findById(99) >> null
+		vacancyRepository.findById(99) >> null
 
 		when:
 		vacancyService.findById(99)
@@ -94,7 +95,7 @@ class VacancyServiceSpec extends Specification {
 	def "find by enterprise should return the enterprise vacancies"() {
 		given:
 		List<Vacancy> vacancies = [validVacancy()]
-		vacancyDAO.findByEnterprise(1) >> vacancies
+		vacancyRepository.findByEnterprise(1) >> vacancies
 
 		expect:
 		vacancyService.findByEnterprise(1) == vacancies
@@ -108,7 +109,7 @@ class VacancyServiceSpec extends Specification {
 		Vacancy result = vacancyService.update(vacancy)
 
 		then:
-		1 * vacancyDAO.update(vacancy) >> vacancy
+		1 * vacancyRepository.update(vacancy) >> vacancy
 		result == vacancy
 	}
 
@@ -118,12 +119,12 @@ class VacancyServiceSpec extends Specification {
 
 		then:
 		thrown(ValidationException)
-		0 * vacancyDAO.update(_)
+		0 * vacancyRepository.update(_)
 	}
 
 	def "update should fail when the vacancy does not exist"() {
 		given:
-		vacancyDAO.update(_) >> null
+		vacancyRepository.update(_) >> null
 
 		when:
 		vacancyService.update(validVacancy(id: 99))
@@ -133,17 +134,17 @@ class VacancyServiceSpec extends Specification {
 		exception.message == "Vaga com ID 99 não existe"
 	}
 
-	def "delete should remove the vacancy through the DAO"() {
+	def "delete should remove the vacancy through the repository"() {
 		when:
 		vacancyService.delete(1)
 
 		then:
-		1 * vacancyDAO.delete(1) >> true
+		1 * vacancyRepository.delete(1) >> true
 	}
 
 	def "delete should fail when the vacancy does not exist"() {
 		given:
-		vacancyDAO.delete(99) >> false
+		vacancyRepository.delete(99) >> false
 
 		when:
 		vacancyService.delete(99)

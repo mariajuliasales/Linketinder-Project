@@ -11,14 +11,16 @@ class ConsoleInput {
 	private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern('dd/MM/yyyy')
 
 	private final Scanner scanner
+	private final PrintStream out
 
-	ConsoleInput(Scanner scanner = new Scanner(System.in)) {
+	ConsoleInput(Scanner scanner = new Scanner(System.in), PrintStream out = System.out) {
 		this.scanner = scanner
+		this.out = out
 	}
 
 	String readText(String prompt) {
 		if (prompt) {
-			println prompt
+			out.println prompt
 		}
 		if (!scanner.hasNextLine()) {
 			throw new EndOfInputException()
@@ -34,7 +36,7 @@ class ConsoleInput {
 	int readInt(String prompt) {
 		String value = readText(prompt)
 		while (!value.isInteger()) {
-			println 'Digite um número inteiro.'
+			out.println 'Digite um número inteiro.'
 			value = readText(prompt)
 		}
 		value.toInteger()
@@ -50,7 +52,7 @@ class ConsoleInput {
 			try {
 				return LocalDate.parse(value, DATE_FORMAT)
 			} catch (DateTimeParseException ignored) {
-				println 'Data inválida. Use o formato dd/mm/aaaa.'
+				out.println 'Data inválida. Use o formato dd/mm/aaaa.'
 			}
 		}
 	}
@@ -66,7 +68,7 @@ class ConsoleInput {
 			if (status) {
 				return status
 			}
-			println 'Status inválido.'
+			out.println 'Status inválido.'
 		}
 	}
 }

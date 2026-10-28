@@ -9,10 +9,12 @@ import static com.mariajuliasales.fixture.TestData.validCandidate
 
 class PersonValidatorSpec extends Specification {
 
+	PersonValidator validator = new PersonValidator()
+
 	def "valid person should pass on create and on update"() {
 		when:
-		PersonValidator.validateForCreate(validCandidate())
-		PersonValidator.validateForUpdate(validCandidate())
+		validator.validateForCreate(validCandidate())
+		validator.validateForUpdate(validCandidate())
 
 		then:
 		noExceptionThrown()
@@ -20,7 +22,7 @@ class PersonValidatorSpec extends Specification {
 
 	def "null person should fail"() {
 		when:
-		PersonValidator.validateForCreate(null)
+		validator.validateForCreate(null)
 
 		then:
 		ValidationException exception = thrown()
@@ -30,7 +32,7 @@ class PersonValidatorSpec extends Specification {
 	@Unroll
 	def "person with invalid #field '#value' should fail with '#message'"() {
 		when:
-		PersonValidator.validateForCreate(validCandidate([(field): value]))
+		validator.validateForCreate(validCandidate([(field): value]))
 
 		then:
 		ValidationException exception = thrown()
@@ -48,7 +50,7 @@ class PersonValidatorSpec extends Specification {
 	@Unroll
 	def "person with invalid address #field '#value' should fail with '#message'"() {
 		when:
-		PersonValidator.validateForCreate(validCandidate(address: validAddress([(field): value])))
+		validator.validateForCreate(validCandidate(address: validAddress([(field): value])))
 
 		then:
 		ValidationException exception = thrown()
@@ -65,7 +67,7 @@ class PersonValidatorSpec extends Specification {
 	@Unroll
 	def "password '#password' should be required on create"() {
 		when:
-		PersonValidator.validateForCreate(validCandidate(password: password))
+		validator.validateForCreate(validCandidate(password: password))
 
 		then:
 		ValidationException exception = thrown()
@@ -78,7 +80,7 @@ class PersonValidatorSpec extends Specification {
 	@Unroll
 	def "empty password '#password' should be accepted on update"() {
 		when:
-		PersonValidator.validateForUpdate(validCandidate(password: password))
+		validator.validateForUpdate(validCandidate(password: password))
 
 		then:
 		noExceptionThrown()
@@ -89,7 +91,7 @@ class PersonValidatorSpec extends Specification {
 
 	def "short password should fail on update"() {
 		when:
-		PersonValidator.validateForUpdate(validCandidate(password: "12345"))
+		validator.validateForUpdate(validCandidate(password: "12345"))
 
 		then:
 		ValidationException exception = thrown()

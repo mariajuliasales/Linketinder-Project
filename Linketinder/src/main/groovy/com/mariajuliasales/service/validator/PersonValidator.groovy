@@ -9,14 +9,16 @@ import com.mariajuliasales.util.PasswordValidator
 import static com.mariajuliasales.service.validator.Validation.hasText
 import static com.mariajuliasales.service.validator.Validation.require
 
-final class PersonValidator {
+class PersonValidator implements Validator<Person> {
 
-	static void validateForCreate(Person person) {
+	@Override
+	void validateForCreate(Person person) {
 		validateCommonFields(person)
 		validatePassword(person.password)
 	}
 
-	static void validateForUpdate(Person person) {
+	@Override
+	void validateForUpdate(Person person) {
 		validateCommonFields(person)
 		if (person.password) {
 			validatePassword(person.password)

@@ -12,9 +12,9 @@ class EnterpriseMenu extends Menu {
 	private final AddressForm addressForm
 	private final CompetenceForm competenceForm
 
-	EnterpriseMenu(ConsoleInput input, EnterpriseService enterpriseService, AddressForm addressForm,
+	EnterpriseMenu(ConsoleInput input, ConsoleView view, EnterpriseService enterpriseService, AddressForm addressForm,
 	CompetenceForm competenceForm) {
-		super('Empresas', input)
+		super('Empresas', input, view)
 		this.enterpriseService = enterpriseService
 		this.addressForm = addressForm
 		this.competenceForm = competenceForm
@@ -33,17 +33,17 @@ class EnterpriseMenu extends Menu {
 
 	private void listEnterprises() {
 		List<String> profiles = enterpriseService.findAll().collect { Enterprise enterprise ->
-			View.formatAnonymousEnterprise(EnterpriseMapper.toAnonymousResponse(enterprise))
+			ResponseFormatter.formatAnonymousEnterprise(EnterpriseMapper.toAnonymousResponse(enterprise))
 		}
-		View.showAll(profiles, 'Nenhuma empresa cadastrada.')
+		view.showAll(profiles, 'Nenhuma empresa cadastrada.')
 	}
 
 	private void showEnterprise() {
-		View.showMessage(View.formatEnterprise(EnterpriseMapper.toResponse(findEnterprise())))
+		view.showMessage(ResponseFormatter.formatEnterprise(EnterpriseMapper.toResponse(findEnterprise())))
 	}
 
 	private void createEnterprise() {
-		View.showMessage('Criando nova empresa...')
+		view.showMessage('Criando nova empresa...')
 		EnterpriseRequest request = new EnterpriseRequest(
 				input.readText('Digite o nome da empresa:'),
 				input.readText('Digite o email corporativo da empresa:'),
@@ -54,12 +54,12 @@ class EnterpriseMenu extends Menu {
 				input.readText('Digite o CNPJ da empresa:')
 				)
 		Enterprise enterprise = enterpriseService.create(EnterpriseMapper.toEntity(request))
-		View.showMessage("Empresa cadastrada com sucesso! ID: ${enterprise.id}")
+		view.showMessage("Empresa cadastrada com sucesso! ID: ${enterprise.id}")
 	}
 
 	private void updateEnterprise() {
 		Enterprise enterprise = findEnterprise()
-		View.showMessage('Atualizando empresa (Enter mantém o valor atual)...')
+		view.showMessage('Atualizando empresa (Enter mantém o valor atual)...')
 		enterprise.name = input.readText('Nome', enterprise.name)
 		enterprise.email = input.readText('Email', enterprise.email)
 		enterprise.password = input.readText('Nova senha (Enter mantém a atual):')
@@ -69,12 +69,12 @@ class EnterpriseMenu extends Menu {
 		enterprise.competences = competenceForm.read('Competências', enterprise.competences)
 
 		enterpriseService.update(enterprise)
-		View.showMessage('Empresa atualizada com sucesso!')
+		view.showMessage('Empresa atualizada com sucesso!')
 	}
 
 	private void deleteEnterprise() {
 		enterpriseService.delete(input.readInt('Digite o ID da empresa a excluir:'))
-		View.showMessage('Empresa excluída com sucesso!')
+		view.showMessage('Empresa excluída com sucesso!')
 	}
 
 	private Enterprise findEnterprise() {

@@ -2,20 +2,22 @@ package com.mariajuliasales.menu
 
 import com.mariajuliasales.mapper.CompetenceMapper
 import com.mariajuliasales.model.Competence
-import com.mariajuliasales.service.CompetenceService
+import com.mariajuliasales.service.CompetenceCatalog
 
 class CompetenceForm {
 
 	private final ConsoleInput input
-	private final CompetenceService competenceService
+	private final ConsoleView view
+	private final CompetenceCatalog catalog
 
-	CompetenceForm(ConsoleInput input, CompetenceService competenceService) {
+	CompetenceForm(ConsoleInput input, ConsoleView view, CompetenceCatalog catalog) {
 		this.input = input
-		this.competenceService = competenceService
+		this.view = view
+		this.catalog = catalog
 	}
 
 	List<Competence> read(String label, List<Competence> current) {
-		println "Competências disponíveis: ${CompetenceMapper.toNames(competenceService.findAll()).join(', ')}"
+		view.showMessage("Competências disponíveis: ${CompetenceMapper.toNames(catalog.findAll()).join(', ')}")
 		String typed = input.readText(current ? "${label} [${current.join(', ')}]:" : label)
 		typed ? parse(typed) : current
 	}

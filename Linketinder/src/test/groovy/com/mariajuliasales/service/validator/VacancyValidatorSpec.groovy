@@ -9,9 +9,11 @@ import static com.mariajuliasales.fixture.TestData.validVacancy
 
 class VacancyValidatorSpec extends Specification {
 
+	VacancyValidator validator = new VacancyValidator()
+
 	def "valid vacancy should pass"() {
 		when:
-		VacancyValidator.validate(validVacancy())
+		validator.validateForCreate(validVacancy())
 
 		then:
 		noExceptionThrown()
@@ -19,7 +21,7 @@ class VacancyValidatorSpec extends Specification {
 
 	def "null vacancy should fail"() {
 		when:
-		VacancyValidator.validate(null)
+		validator.validateForCreate(null)
 
 		then:
 		ValidationException exception = thrown()
@@ -29,7 +31,7 @@ class VacancyValidatorSpec extends Specification {
 	@Unroll
 	def "vacancy with invalid #field '#value' should fail with '#message'"() {
 		when:
-		VacancyValidator.validate(validVacancy([(field): value]))
+		validator.validateForCreate(validVacancy([(field): value]))
 
 		then:
 		ValidationException exception = thrown()

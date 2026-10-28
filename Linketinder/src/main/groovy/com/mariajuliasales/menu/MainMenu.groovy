@@ -4,15 +4,9 @@ class MainMenu extends Menu {
 
 	private final List<MenuOption> options
 
-	MainMenu(ConsoleInput input, CandidateMenu candidateMenu, EnterpriseMenu enterpriseMenu, VacancyMenu vacancyMenu,
-	CompetenceMenu competenceMenu) {
-		super('LinkeTinder', input)
-		options = [
-			new MenuOption('Candidatos', candidateMenu.&run),
-			new MenuOption('Empresas', enterpriseMenu.&run),
-			new MenuOption('Vagas', vacancyMenu.&run),
-			new MenuOption('Competências', competenceMenu.&run)
-		]
+	MainMenu(ConsoleInput input, ConsoleView view, List<Menu> submenus) {
+		super('LinkeTinder', input, view)
+		options = submenus.collect { Menu submenu -> new MenuOption(submenu.title, submenu.&run) }
 	}
 
 	@Override
@@ -22,11 +16,11 @@ class MainMenu extends Menu {
 
 	@Override
 	protected void showOptions(List<String> labels) {
-		View.showMainMenu(labels)
+		view.showMainMenu(labels)
 	}
 
 	@Override
 	protected void onExit() {
-		View.showMessage('Saindo do programa...')
+		view.showMessage('Saindo do programa...')
 	}
 }
