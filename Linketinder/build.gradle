@@ -17,9 +17,6 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
-    testImplementation 'net.bytebuddy:byte-buddy:1.14.12'
-    testImplementation 'org.objenesis:objenesis:3.3'
-
 }
 
 java {
@@ -27,7 +24,6 @@ java {
             languageVersion = JavaLanguageVersion.of(21)
         }
 }
-
 
 application {
     mainClass = 'com.mariajuliasales.Main'
