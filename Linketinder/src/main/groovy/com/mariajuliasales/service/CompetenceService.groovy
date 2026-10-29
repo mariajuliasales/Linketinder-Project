@@ -1,63 +1,24 @@
 package com.mariajuliasales.service
 
-import com.mariajuliasales.dao.CompetenceDAO
+import com.mariajuliasales.exception.DuplicateEntityException
 import com.mariajuliasales.model.Competence
+import com.mariajuliasales.repository.CompetenceRepository
+import com.mariajuliasales.service.validator.Validator
 
-class CompetenceService {
+class CompetenceService extends CrudService<Competence> implements CompetenceCatalog {
 
-    private static final int MAX_NAME_LENGTH = 50
+	private final CompetenceRepository competenceRepository
 
-    private final CompetenceDAO competenceDAO
+	CompetenceService(CompetenceRepository repository, Validator<Competence> validator) {
+		super(repository, validator, 'Competência')
+		this.competenceRepository = repository
+	}
 
-    CompetenceService(CompetenceDAO competenceDAO) {
-        this.competenceDAO = competenceDAO
-    }
-
-    Competence create(String name) {
-        validateName(name)
-        if (competenceDAO.findByName(name)) {
-            throw new IllegalArgumentException("Competence already exists")
-        }
-        competenceDAO.create(new Competence(name))
-    }
-
-    List<Competence> findAll() {
-        competenceDAO.findAll()
-    }
-
-    Competence findById(int id) {
-        Competence competence = competenceDAO.findById(id)
-        if (!competence) {
-            throw new IllegalArgumentException("Competence not found")
-        }
-        competence
-    }
-
-    Competence update(int id, String newName) {
-        validateName(newName)
-        Competence existing = competenceDAO.findByName(newName)
-        if (existing && existing.id != id) {
-            throw new IllegalArgumentException("Competence already exists")
-        }
-        Competence updated = competenceDAO.update(new Competence(id, newName))
-        if (!updated) {
-            throw new IllegalArgumentException("Competence not found")
-        }
-        updated
-    }
-
-    void delete(int id) {
-        if (!competenceDAO.delete(id)) {
-            throw new IllegalArgumentException("Competence not found")
-        }
-    }
-
-    private static void validateName(String name) {
-        if (!name?.trim()) {
-            throw new IllegalArgumentException("Competence name cannot be empty")
-        }
-        if (name.trim().length() > MAX_NAME_LENGTH) {
-            throw new IllegalArgumentException("Competence name must have at most ${MAX_NAME_LENGTH} characters")
-        }
-    }
+	@Override
+	protected void checkBusinessRules(Competence competence) {
+		Competence existing = competenceRepository.findByName(competence.name)
+		if (existing && existing.id != competence.id) {
+			throw new DuplicateEntityException("Competência '${competence.name}' já cadastrada".toString())
+		}
+	}
 }

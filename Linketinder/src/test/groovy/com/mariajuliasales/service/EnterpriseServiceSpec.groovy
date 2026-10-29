@@ -1,186 +1,133 @@
 package com.mariajuliasales.service
 
-import com.mariajuliasales.dao.EnterpriseDAO
-import com.mariajuliasales.model.Address
-import com.mariajuliasales.model.Competence
+import com.mariajuliasales.exception.EntityNotFoundException
+import com.mariajuliasales.exception.ValidationException
 import com.mariajuliasales.model.Enterprise
+import com.mariajuliasales.repository.EnterpriseRepository
+import com.mariajuliasales.service.validator.EnterpriseValidator
+import com.mariajuliasales.service.validator.PersonValidator
 import spock.lang.Specification
-import spock.lang.Unroll
+
+import static com.mariajuliasales.fixture.TestData.validEnterprise
 
 class EnterpriseServiceSpec extends Specification {
 
-    EnterpriseDAO enterpriseDAO = Mock(EnterpriseDAO)
-    EnterpriseService enterpriseService = new EnterpriseService(enterpriseDAO)
+	EnterpriseRepository enterpriseRepository = Mock()
+	EnterpriseService enterpriseService = new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator()))
 
-    private static Enterprise validEnterprise(Map changes = [:]) {
-        Map fields = [id: 1, name: "TechSolutions Brasil", email: "contato@techsolutions.com.br", password: "123456",
-                      address: validAddress(),
-                      description: "Empresa especializada em desenvolvimento de software sob medida",
-                      competences: [new Competence("Java"), new Competence("Spring Framework")],
-                      cnpj: "00.000.000/E08G-12"] + changes
-        new Enterprise(fields)
-    }
+	def "create should save a valid enterprise"() {
+		given:
+		Enterprise enterprise = validEnterprise()
 
-    private static Address validAddress(Map changes = [:]) {
-        new Address([cep: "01310000", city: "São Paulo", state: "SP", country: "Brasil"] + changes)
-    }
+		when:
+		Enterprise result = enterpriseService.create(enterprise)
 
-    def "create enterprise with valid data"() {
-        given:
-        Enterprise enterprise = validEnterprise()
+		then:
+		1 * enterpriseRepository.create(enterprise) >> enterprise
+		result == enterprise
+	}
 
-        when:
-        Enterprise result = enterpriseService.create(enterprise)
+	def "create should not save an invalid enterprise"() {
+		when:
+		enterpriseService.create(validEnterprise(cnpj: "invalid"))
 
-        then:
-        result != null
-        result.name == enterprise.name
-        result.email == enterprise.email
-        1 * enterpriseDAO.create(_ as Enterprise) >> { Enterprise e -> enterprise }
-    }
+		then:
+		thrown(ValidationException)
+		0 * enterpriseRepository.create(_)
+	}
 
-    @Unroll
-    def "create enterprise with invalid cnpj should fail"() {
-        given:
-        Enterprise enterprise = validEnterprise(cnpj: cnpj)
+	def "create should require a password"() {
+		when:
+		enterpriseService.create(validEnterprise(password: null))
 
-        when:
-        enterpriseService.create(enterprise)
+		then:
+		thrown(ValidationException)
+		0 * enterpriseRepository.create(_)
+	}
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Invalid enterprise cnpj"
-        0 * enterpriseDAO.create(_)
+	def "find all should return the enterprises from the repository"() {
+		given:
+		List<Enterprise> enterprises = [
+			validEnterprise(id: 1),
+			validEnterprise(id: 2, email: "rh@inovacaodigital.io")
+		]
+		enterpriseRepository.findAll() >> enterprises
 
-        where:
-        cnpj << ["00.000.000/E08G-99", "AA.AAA.AAA/AAAA-AA", "12.ABC.345/01D", "cnpj_invalido", ""]
+		expect:
+		enterpriseService.findAll() == enterprises
+	}
 
-    }
+	def "find by id should return the enterprise from the repository"() {
+		given:
+		Enterprise enterprise = validEnterprise(id: 10)
+		enterpriseRepository.findById(10) >> enterprise
 
-    @Unroll
-    def "create enterprise with invalid email should fail"() {
-        given:
-        Enterprise enterprise = validEnterprise(email: email)
+		expect:
+		enterpriseService.findById(10) == enterprise
+	}
 
-        when:
-        enterpriseService.create(enterprise)
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Invalid enterprise email"
-        0 * enterpriseDAO.create(_)
+	def "find by id should fail when the enterprise does not exist"() {
+		given:
+		enterpriseRepository.findById(99) >> null
 
-        where:
-        email << ["invalid", "joaoemail.com", "joao@.com", "joao@email", "joao@email.", "529.982.247-25, 11222333000181"]
+		when:
+		enterpriseService.findById(99)
 
-    }
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == "Empresa com ID 99 não existe"
+	}
 
-    @Unroll
-    def "create enterprise with invalid #field should fail"() {
-        given:
-        Enterprise enterprise = validEnterprise([(field): value])
+	def "update should accept an enterprise without a new password"() {
+		given:
+		Enterprise enterprise = validEnterprise(password: null)
 
-        when:
-        enterpriseService.create(enterprise)
+		when:
+		Enterprise result = enterpriseService.update(enterprise)
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message.startsWith(message)
-        0 * enterpriseDAO.create(_)
+		then:
+		1 * enterpriseRepository.update(enterprise) >> enterprise
+		result == enterprise
+	}
 
-        where:
-        field      | value   || message
-        "password" | "123"   || "Invalid enterprise password"
-        "password" | null    || "Invalid enterprise password"
-        "address"  | null    || "Invalid enterprise address"
-        "name"     | " "     || "Invalid enterprise name"
-    }
+	def "update should not save an invalid enterprise"() {
+		when:
+		enterpriseService.update(validEnterprise(email: "invalid"))
 
-    @Unroll
-    def "create enterprise with invalid address #field should fail"() {
-        given:
-        Enterprise enterprise = validEnterprise(address: validAddress([(field): value]))
+		then:
+		thrown(ValidationException)
+		0 * enterpriseRepository.update(_)
+	}
 
-        when:
-        enterpriseService.create(enterprise)
+	def "update should fail when the enterprise does not exist"() {
+		given:
+		enterpriseRepository.update(_) >> null
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == message
-        0 * enterpriseDAO.create(_)
+		when:
+		enterpriseService.update(validEnterprise(id: 99))
 
-        where:
-        field   | value || message
-        "cep"   | "abc" || "Invalid enterprise cep"
-        "state" | "S"   || "Invalid enterprise city or state"
-        "city"  | " "   || "Invalid enterprise city or state"
-    }
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == "Empresa com ID 99 não existe"
+	}
 
-    def "get all enterprises should return list from database"() {
-        given:
-        Enterprise enterprise1 = validEnterprise()
-        Enterprise enterprise2 = validEnterprise(id: 2, name: "Inovacao Digital LTDA", email: "rh@inovacaodigital.io")
-        enterpriseDAO.findAll() >> [enterprise1, enterprise2]
+	def "delete should remove the enterprise through the repository"() {
+		when:
+		enterpriseService.delete(1)
 
-        when:
-        List<Enterprise> result = enterpriseService.getAllEnterprises()
+		then:
+		1 * enterpriseRepository.delete(1) >> true
+	}
 
-        then:
-        result == [enterprise1, enterprise2]
-    }
+	def "delete should fail when the enterprise does not exist"() {
+		given:
+		enterpriseRepository.delete(99) >> false
 
-    def "get enterprise by id should return enterprise from database"() {
-        given:
-        Enterprise enterprise = validEnterprise(id: 10)
-        enterpriseDAO.findById(10) >> enterprise
+		when:
+		enterpriseService.delete(99)
 
-        when:
-        Enterprise result = enterpriseService.getEnterpriseById(10)
-
-        then:
-        result == enterprise
-    }
-
-    def "update enterprise with valid data"() {
-        given:
-        Enterprise enterprise = validEnterprise(password: null)
-
-        when:
-        Enterprise result = enterpriseService.update(enterprise)
-
-        then:
-        1 * enterpriseDAO.update(enterprise) >> enterprise
-        result == enterprise
-    }
-
-    def "update enterprise that does not exist should fail"() {
-        given:
-        enterpriseDAO.update(_) >> null
-
-        when:
-        enterpriseService.update(validEnterprise(id: 99))
-
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Enterprise not found"
-    }
-
-    def "delete enterprise should call the DAO"() {
-        when:
-        enterpriseService.delete(1)
-
-        then:
-        1 * enterpriseDAO.delete(1) >> true
-    }
-
-    def "delete enterprise that does not exist should fail"() {
-        given:
-        enterpriseDAO.delete(99) >> false
-
-        when:
-        enterpriseService.delete(99)
-
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Enterprise not found"
-    }
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == "Empresa com ID 99 não existe"
+	}
 }

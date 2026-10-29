@@ -1,19 +1,24 @@
-import { COMPETENCIES, STATES } from '../types';
-import type { Candidate, Competence, Enterprise, PersonType } from '../types';
-import { HOME_BY_TYPE, emailInUse, register } from '../services';
-import { el } from '../dom';
+import { HOME_BY_TYPE, ROUTES, currentQuery, navigateTo } from '../navigation';
+import { isEmailInUse, register } from '../services/auth';
+import { elementFromTemplate, requireElement } from '../ui/dom';
+import { competenceFieldset, isFormValid, readForm, stateSelect } from '../ui/forms';
+import type { FormReader } from '../ui/forms';
+import type { Account, IsoDate, PersonType } from '../types';
 
-// Idade mínima de 16 anos
-const maxBirthDate = new Date(new Date().getFullYear() - 16, new Date().getMonth(), new Date().getDate())
-  .toISOString()
-  .slice(0, 10);
+const MINIMUM_AGE = 16;
+const INVALID_EMAIL_MESSAGE = 'Informe um e-mail válido.';
+const DUPLICATED_EMAIL_MESSAGE = 'Este e-mail já está cadastrado.';
 
-// Template só com texto fixo; nenhum dado de usuário entra aqui
+function latestBirthDateFor(age: number): IsoDate {
+  const today = new Date();
+  return new Date(today.getFullYear() - age, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
+}
+
 const TEMPLATE = `
   <div class="card shadow-sm mx-auto" style="max-width: 760px">
     <div class="card-body p-4">
       <h1 class="h3 mb-1">Crie sua conta</h1>
-      <p class="text-body-secondary">Já tem conta? <a href="#/login">Entrar</a></p>
+      <p class="text-body-secondary">Já tem conta? <a href="${ROUTES.login}">Entrar</a></p>
 
       <div class="btn-group w-100 mb-4" role="group" aria-label="Tipo de conta">
         <input type="radio" class="btn-check" name="type" id="type-candidate" value="CANDIDATE" checked>
@@ -31,7 +36,7 @@ const TEMPLATE = `
         <div class="col-md-6">
           <label class="form-label" for="email">E-mail</label>
           <input class="form-control" id="email" name="email" type="email" required>
-          <div class="invalid-feedback" id="email-error">Informe um e-mail válido.</div>
+          <div class="invalid-feedback" id="email-error">${INVALID_EMAIL_MESSAGE}</div>
         </div>
         <div class="col-md-6">
           <label class="form-label" for="password">Senha</label>
@@ -46,8 +51,8 @@ const TEMPLATE = `
         </div>
         <div class="col-md-4" data-only="CANDIDATE">
           <label class="form-label" for="birthDate">Data de nascimento</label>
-          <input class="form-control" id="birthDate" name="birthDate" type="date" required max="${maxBirthDate}">
-          <div class="invalid-feedback">É preciso ter pelo menos 16 anos.</div>
+          <input class="form-control" id="birthDate" name="birthDate" type="date" required max="${latestBirthDateFor(MINIMUM_AGE)}">
+          <div class="invalid-feedback">É preciso ter pelo menos ${MINIMUM_AGE} anos.</div>
         </div>
         <div class="col-md-4" data-only="CANDIDATE">
           <label class="form-label" for="training">Formação</label>
@@ -71,14 +76,7 @@ const TEMPLATE = `
           <input class="form-control" id="city" name="city" required>
           <div class="invalid-feedback">Informe a cidade.</div>
         </div>
-        <div class="col-md-2">
-          <label class="form-label" for="state">UF</label>
-          <select class="form-select" id="state" name="state" required>
-            <option value="" selected disabled>UF</option>
-            ${STATES.map((uf) => `<option>${uf}</option>`).join('')}
-          </select>
-          <div class="invalid-feedback">Escolha.</div>
-        </div>
+        <div class="col-md-2">${stateSelect('state')}</div>
         <div class="col-md-3">
           <label class="form-label" for="country">País</label>
           <input class="form-control" id="country" name="country" required value="Brasil">
@@ -91,17 +89,7 @@ const TEMPLATE = `
           <div class="form-text" data-only="CANDIDATE">Visível para as empresas: não coloque seu nome ou contato.</div>
         </div>
 
-        <fieldset class="col-12">
-          <legend class="form-label fs-6">Competências</legend>
-          <div class="row row-cols-2 row-cols-md-4 g-2">
-            ${COMPETENCIES.map((c, i) => `
-              <div class="col form-check">
-                <input class="form-check-input" type="checkbox" name="competencies" value="${c}" id="competence-${i}">
-                <label class="form-check-label" for="competence-${i}">${c}</label>
-              </div>`).join('')}
-          </div>
-          <div class="text-danger small mt-1" id="competencies-error" hidden>Selecione ao menos uma competência.</div>
-        </fieldset>
+        ${competenceFieldset('Competências', 'competence')}
 
         <div class="col-12">
           <button class="btn btn-primary w-100" type="submit">Cadastrar</button>
@@ -110,66 +98,71 @@ const TEMPLATE = `
     </div>
   </div>`;
 
-export function registerPage(): HTMLElement {
-  const page = el('div');
-  page.innerHTML = TEMPLATE;
+function selectedType(page: HTMLElement): PersonType {
+  return requireElement<HTMLInputElement>(page, '#type-enterprise').checked ? 'ENTERPRISE' : 'CANDIDATE';
+}
 
-  const form = page.querySelector('form')!;
-  const email = page.querySelector<HTMLInputElement>('#email')!;
-  const emailError = page.querySelector<HTMLDivElement>('#email-error')!;
-  const competenciesError = page.querySelector<HTMLDivElement>('#competencies-error')!;
-  let type: PersonType = 'CANDIDATE';
-  const enterpriseRadio = page.querySelector<HTMLInputElement>('#type-enterprise')!;
-
-  // Campo disabled sai da validação e do FormData
-  page.querySelectorAll<HTMLInputElement>('input[name="type"]').forEach((radio) => {
-    radio.addEventListener('change', () => {
-      type = radio.value === 'ENTERPRISE' ? 'ENTERPRISE' : 'CANDIDATE';
-      page.querySelectorAll<HTMLElement>('[data-only]').forEach((field) => {
-        const hide = field.dataset.only !== type;
-        field.hidden = hide;
-        field.querySelectorAll('input').forEach((input) => (input.disabled = hide));
-      });
+function showOnlyFieldsOf(page: HTMLElement, type: PersonType): void {
+  page.querySelectorAll<HTMLElement>('[data-only]').forEach((field) => {
+    const belongsToOtherType = field.dataset.only !== type;
+    field.hidden = belongsToOtherType;
+    // Inputs desabilitados ficam fora da validação do navegador e do FormData
+    field.querySelectorAll('input').forEach((input) => {
+      input.disabled = belongsToOtherType;
     });
   });
+}
 
-  // Vindo de "Quero contratar" na home, já abre com "Sou empresa" marcado
-  if (location.hash.includes('type=ENTERPRISE')) {
-    enterpriseRadio.checked = true;
-    enterpriseRadio.dispatchEvent(new Event('change'));
+function preselectTypeFromUrl(page: HTMLElement): void {
+  if (currentQuery().get('type') === 'ENTERPRISE') {
+    requireElement<HTMLInputElement>(page, '#type-enterprise').checked = true;
+    showOnlyFieldsOf(page, 'ENTERPRISE');
   }
+}
+
+function markDuplicatedEmail(page: HTMLElement, email: string): void {
+  const isDuplicated = isEmailInUse(email);
+  requireElement<HTMLInputElement>(page, '#email').setCustomValidity(isDuplicated ? DUPLICATED_EMAIL_MESSAGE : '');
+  requireElement(page, '#email-error').textContent = isDuplicated ? DUPLICATED_EMAIL_MESSAGE : INVALID_EMAIL_MESSAGE;
+}
+
+function buildAccount(fields: FormReader, type: PersonType): Account {
+  const common = {
+    id: crypto.randomUUID(),
+    name: fields.text('name'),
+    email: fields.text('email'),
+    password: fields.text('password'),
+    description: fields.text('description'),
+    address: {
+      cep: fields.digits('cep'), city: fields.text('city'), state: fields.text('state'), country: fields.text('country'),
+    },
+    competences: fields.competences(),
+  };
+  return type === 'CANDIDATE'
+    ? { ...common, type, cpf: fields.digits('cpf'), birthDate: fields.text('birthDate'), training: fields.text('training') }
+    : { ...common, type, cnpj: fields.digits('cnpj') };
+}
+
+export function registerPage(): HTMLElement {
+  const page = elementFromTemplate(TEMPLATE);
+  const form = requireElement<HTMLFormElement>(page, 'form');
+  const competencesError = requireElement<HTMLDivElement>(page, '#competence-error');
+
+  page.querySelectorAll<HTMLInputElement>('input[name="type"]').forEach((radio) => {
+    radio.addEventListener('change', () => showOnlyFieldsOf(page, selectedType(page)));
+  });
+  preselectTypeFromUrl(page);
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    const data = new FormData(form);
-    const text = (field: string) => String(data.get(field) ?? '').trim();
-    const digits = (field: string) => text(field).replace(/\D/g, '');
-    const competencies = data.getAll('competencies').map(String) as Competence[];
-
-    const duplicated = emailInUse(text('email'));
-    email.setCustomValidity(duplicated ? 'duplicado' : '');
-    emailError.textContent = duplicated ? 'Este e-mail já está cadastrado.' : 'Informe um e-mail válido.';
-    competenciesError.hidden = competencies.length > 0;
-    form.classList.add('was-validated');
-    if (!form.checkValidity() || competencies.length === 0) return;
-
-    const common = {
-      id: crypto.randomUUID(),
-      name: text('name'),
-      email: text('email'),
-      password: text('password'),
-      description: text('description'),
-      address: { cep: digits('cep'), city: text('city'), state: text('state'), country: text('country') },
-      competencies,
-    };
-
-    const person: Candidate | Enterprise =
-      type === 'CANDIDATE'
-        ? { ...common, type, cpf: digits('cpf'), birthDate: text('birthDate'), training: text('training') }
-        : { ...common, type, cnpj: digits('cnpj') };
-
-    register(person);
-    location.hash = HOME_BY_TYPE[type];
+    const fields = readForm(form);
+    markDuplicatedEmail(page, fields.text('email'));
+    if (!isFormValid(form, competencesError, fields.competences())) {
+      return;
+    }
+    const type = selectedType(page);
+    register(buildAccount(fields, type));
+    navigateTo(HOME_BY_TYPE[type]);
   });
 
   return page;

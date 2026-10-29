@@ -1,8 +1,8 @@
-export const COMPETENCIES = [
+export const COMPETENCES = [
   'Python', 'Java', 'Spring Framework', 'Angular', 'Groovy', 'JavaScript',
-  'TypeScript', 'SQL', 'Docker', 'Kafka', 'React',
+  'TypeScript', 'SQL', 'Docker', 'Kafka', 'React', 'Ilustrador',
 ] as const;
-export type Competence = (typeof COMPETENCIES)[number];
+export type Competence = (typeof COMPETENCES)[number];
 
 export const STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
@@ -10,7 +10,8 @@ export const STATES = [
 ] as const;
 
 export type PersonType = 'CANDIDATE' | 'ENTERPRISE';
-
+export type VacancyStatus = 'OPEN' | 'PAUSED' | 'CLOSED';
+export type IsoDate = string;
 
 export interface Address {
   cep: string;
@@ -24,16 +25,16 @@ export interface Person {
   type: PersonType;
   name: string;
   email: string;
-  password: string; // sem criptografia por enquanto
+  password: string;
   description: string;
   address: Address;
-  competencies: Competence[];
+  competences: Competence[];
 }
 
 export interface Candidate extends Person {
   type: 'CANDIDATE';
   cpf: string;
-  birthDate: string; // YYYY-MM-DD
+  birthDate: IsoDate;
   training: string;
 }
 
@@ -42,22 +43,23 @@ export interface Enterprise extends Person {
   cnpj: string;
 }
 
+export type Account = Candidate | Enterprise;
+
 export interface Vacancy {
   id: string;
   enterpriseId: string;
   title: string;
   description: string;
-  status: 'OPEN' | 'PAUSED' | 'CLOSED';
+  status: VacancyStatus;
   city: string;
   state: string;
-  competencies: Competence[];
+  competences: Competence[];
 }
 
-// O que um lado pode ver do outro
 export interface CandidateAnonymous {
   training: string;
   description: string;
-  competencies: Competence[];
+  competences: Competence[];
 }
 
 export interface VacancyAnonymous {
@@ -65,5 +67,5 @@ export interface VacancyAnonymous {
   description: string;
   city: string;
   state: string;
-  competencies: Competence[];
+  competences: Competence[];
 }

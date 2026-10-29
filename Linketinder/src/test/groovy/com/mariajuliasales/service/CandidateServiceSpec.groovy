@@ -1,213 +1,133 @@
 package com.mariajuliasales.service
 
-import com.mariajuliasales.dao.CandidateDAO
-import com.mariajuliasales.model.Address
+import com.mariajuliasales.exception.EntityNotFoundException
+import com.mariajuliasales.exception.ValidationException
 import com.mariajuliasales.model.Candidate
-import com.mariajuliasales.model.Competence
+import com.mariajuliasales.repository.CandidateRepository
+import com.mariajuliasales.service.validator.CandidateValidator
+import com.mariajuliasales.service.validator.PersonValidator
 import spock.lang.Specification
-import spock.lang.Unroll
 
-import java.time.LocalDate
+import static com.mariajuliasales.fixture.TestData.validCandidate
 
 class CandidateServiceSpec extends Specification {
 
-    CandidateDAO candidateDAO = Mock(CandidateDAO)
-    CandidateService candidateService = new CandidateService(candidateDAO)
+	CandidateRepository candidateRepository = Mock()
+	CandidateService candidateService = new CandidateService(candidateRepository, new CandidateValidator(new PersonValidator()))
 
-    private static Candidate validCandidate(Map changes = [:]) {
-        Map fields = [id: 1, name: "João", email: "joao@email.com", password: "123456",
-                      address: validAddress(), description: "Desenvolvedor Java",
-                      competences: [new Competence("JavaScript")], cpf: "529.982.247-25",
-                      birthDate: LocalDate.of(1995, 5, 20), training: "Ciência da Computação"] + changes
-        new Candidate(fields)
-    }
+	def "create should save a valid candidate"() {
+		given:
+		Candidate candidate = validCandidate()
 
-    private static Address validAddress(Map changes = [:]) {
-        new Address([cep: "12345-678", street: "Rua das Flores", number: "100", city: "São Paulo", state: "SP"] + changes)
-    }
+		when:
+		Candidate result = candidateService.create(candidate)
 
-    def "create candidate with valid data"() {
-        given:
-        Candidate candidate = validCandidate()
+		then:
+		1 * candidateRepository.create(candidate) >> candidate
+		result == candidate
+	}
 
-        when:
-        Candidate createdCandidate = candidateService.create(candidate)
+	def "create should not save an invalid candidate"() {
+		when:
+		candidateService.create(validCandidate(cpf: "invalid"))
 
-        then:
-        createdCandidate == candidate
-        1 * candidateDAO.create(candidate) >> candidate
-    }
+		then:
+		thrown(ValidationException)
+		0 * candidateRepository.create(_)
+	}
 
-    def "create candidate with null value should fail"() {
-        when:
-        candidateService.create(null)
+	def "create should require a password"() {
+		when:
+		candidateService.create(validCandidate(password: null))
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Invalid candidate data"
-        0 * candidateDAO.create(_)
-    }
+		then:
+		thrown(ValidationException)
+		0 * candidateRepository.create(_)
+	}
 
-    @Unroll
-    def "create candidate with invalid cpf should fail"() {
-        given:
-        Candidate candidate = validCandidate(cpf: cpf)
+	def "find all should return the candidates from the repository"() {
+		given:
+		List<Candidate> candidates = [
+			validCandidate(id: 1),
+			validCandidate(id: 2)
+		]
+		candidateRepository.findAll() >> candidates
 
-        when:
-        candidateService.create(candidate)
+		expect:
+		candidateService.findAll() == candidates
+	}
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Invalid candidate cpf"
-        0 * candidateDAO.create(_)
+	def "find by id should return the candidate from the repository"() {
+		given:
+		Candidate candidate = validCandidate(id: 10)
+		candidateRepository.findById(10) >> candidate
 
-        where:
-        cpf << ["invalid", "12345678900", "123.456.789-00", "cpf_invalid", "000.000.000-00"]
-    }
+		expect:
+		candidateService.findById(10) == candidate
+	}
 
-    @Unroll
-    def "create candidate with invalid email should fail"() {
-        given:
-        Candidate candidate = validCandidate(email: email)
+	def "find by id should fail when the candidate does not exist"() {
+		given:
+		candidateRepository.findById(99) >> null
 
-        when:
-        candidateService.create(candidate)
+		when:
+		candidateService.findById(99)
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Invalid candidate email"
-        0 * candidateDAO.create(_)
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == "Candidato com ID 99 não existe"
+	}
 
-        where:
-        email << ["invalid", "joaoemail.com", "joao@.com", "joao@email", "joao@email.", "529.982.247-25"]
+	def "update should accept a candidate without a new password"() {
+		given:
+		Candidate candidate = validCandidate(password: "")
 
-    }
+		when:
+		Candidate result = candidateService.update(candidate)
 
-    @Unroll
-    def "create candidate with invalid password should fail"() {
-        given:
-        Candidate candidate = validCandidate(password: password)
+		then:
+		1 * candidateRepository.update(candidate) >> candidate
+		result == candidate
+	}
 
-        when:
-        candidateService.create(candidate)
+	def "update should not save an invalid candidate"() {
+		when:
+		candidateService.update(validCandidate(training: ""))
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message.startsWith("Invalid candidate password")
-        0 * candidateDAO.create(_)
+		then:
+		thrown(ValidationException)
+		0 * candidateRepository.update(_)
+	}
 
-        where:
-        password << [null, "", "12345"]
-    }
+	def "update should fail when the candidate does not exist"() {
+		given:
+		candidateRepository.update(_) >> null
 
-    @Unroll
-    def "create candidate with invalid #field should fail"() {
-        given:
-        Candidate candidate = validCandidate([(field): value])
+		when:
+		candidateService.update(validCandidate(id: 99))
 
-        when:
-        candidateService.create(candidate)
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == "Candidato com ID 99 não existe"
+	}
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == message
-        0 * candidateDAO.create(_)
+	def "delete should remove the candidate through the repository"() {
+		when:
+		candidateService.delete(1)
 
-        where:
-        field       | value     || message
-        "address"   | null      || "Invalid candidate address"
-        "birthDate" | null      || "Invalid candidate birth date"
-        "training"  | " "       || "Invalid candidate training"
-        "name"      | ""        || "Invalid candidate name"
-    }
+		then:
+		1 * candidateRepository.delete(1) >> true
+	}
 
-    @Unroll
-    def "create candidate with invalid address #field should fail"() {
-        given:
-        Candidate candidate = validCandidate(address: validAddress([(field): value]))
+	def "delete should fail when the candidate does not exist"() {
+		given:
+		candidateRepository.delete(99) >> false
 
-        when:
-        candidateService.create(candidate)
+		when:
+		candidateService.delete(99)
 
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == message
-        0 * candidateDAO.create(_)
-
-        where:
-        field   | value || message
-        "cep"   | "123" || "Invalid candidate cep"
-        "cep"   | null  || "Invalid candidate cep"
-        "state" | "São" || "Invalid candidate city or state"
-        "city"  | ""    || "Invalid candidate city or state"
-    }
-
-    def "get all candidates should return list from database"() {
-        given:
-        Candidate candidate = validCandidate(name: "Maria")
-        List<Candidate> expectedCandidates = [candidate]
-        candidateDAO.findAll() >> expectedCandidates
-
-        when:
-        List<Candidate> result = candidateService.getAllCandidates()
-
-        then:
-        result == expectedCandidates
-    }
-
-    def "get candidate by id should return candidate from database"() {
-        given:
-        Candidate candidate = validCandidate(id: 10)
-        candidateDAO.findById(10) >> candidate
-
-        when:
-        Candidate result = candidateService.getCandidateById(10)
-
-        then:
-        result == candidate
-    }
-
-    def "update candidate without new password should keep the current one"() {
-        given:
-        Candidate candidate = validCandidate(password: "")
-
-        when:
-        Candidate result = candidateService.update(candidate)
-
-        then:
-        1 * candidateDAO.update(candidate) >> candidate
-        result == candidate
-    }
-
-    def "update candidate that does not exist should fail"() {
-        given:
-        candidateDAO.update(_) >> null
-
-        when:
-        candidateService.update(validCandidate(id: 99))
-
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Candidate not found"
-    }
-
-    def "delete candidate should call the DAO"() {
-        when:
-        candidateService.delete(1)
-
-        then:
-        1 * candidateDAO.delete(1) >> true
-    }
-
-    def "delete candidate that does not exist should fail"() {
-        given:
-        candidateDAO.delete(99) >> false
-
-        when:
-        candidateService.delete(99)
-
-        then:
-        IllegalArgumentException ex = thrown()
-        ex.message == "Candidate not found"
-    }
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == "Candidato com ID 99 não existe"
+	}
 }
