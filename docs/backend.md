@@ -24,7 +24,7 @@ banco [**PostgreSQL**](database.md) por meio de JDBC.
 | **Validator** | `Validator`, `PersonValidator`, `CandidateValidator`, `EnterpriseValidator`, `VacancyValidator`, `CompetenceValidator`, `Validation` | Regras de validação de cada entidade, injetadas nos services pela interface `Validator<T>` |
 | **Repository** | `Repository`, `PersonRepository`, `CandidateRepository`, `EnterpriseRepository`, `VacancyRepository`, `CompetenceRepository` | Contratos de persistência usados pelos services, sem saber se os dados vêm de JDBC ou de outro lugar. Além do CRUD, tem: `findByEmail`, `findByCpf`, `findByCompetence`, `findByCnpj` |
 | **Exception** | `BusinessException`, `ValidationException`, `EntityNotFoundException`, `DuplicateEntityException`, `EntityInUseException` | Erros de negócio, cada um correspondendo a um status HTTP (400, 404 e 409) |
-| **DAO** | `ConnectionManager`, `DatabaseConnection`, `DatabaseConfig`, `SqlExecutor`, `SqlExceptionTranslator`, `PersonDAO`, `CandidateDAO`, `EnterpriseDAO`, `VacancyDAO`, `CompetenceDAO`, `CompetenceLinkDAO`, `AddressDAO`, `CompetenceLink` | Implementação JDBC dos repositórios: configuração e conexão com o banco, execução do SQL e tradução dos erros do banco |
+| **DAO** | `ConnectionManager`, `DatabaseConnection`, `DatabaseConfig`, `ConnectionFactory`, `PostgresConnectionFactory`, `ConnectionFactories`, `SqlExecutor`, `SqlExceptionTranslator`, `PersonDAO`, `CandidateDAO`, `EnterpriseDAO`, `VacancyDAO`, `CompetenceDAO`, `CompetenceLinkDAO`, `AddressDAO`, `CompetenceLink` | Implementação JDBC dos repositórios: configuração e conexão com o banco, execução do SQL e tradução dos erros do banco |
 | **Model** | `Person`, `AbstractPerson`, `PersonType`, `Address`, `Candidate`, `Enterprise`, `Vacancy`, `Competence`, `VacancyStatus` | Entidades do domínio: só dados e regras, sem formatação de texto |
 | **DTO** | `CandidateRequest`, `EnterpriseRequest`, `VacancyRequest`, `AddressRequest`, `CandidateResponse`, `CandidateAnonymousResponse`, `EnterpriseResponse`, `EnterpriseAnonymousResponse`, `VacancyAnonymousResponse`, `AddressResponse` | Records de entrada e saída. Os anônimos não têm dados que identifiquem a pessoa ou a empresa, e nenhuma resposta tem senha |
 | **Mapper** | `CandidateMapper`, `EnterpriseMapper`, `VacancyMapper`, `AddressMapper`, `CompetenceMapper` | Converte entre DTOs e entidades (`toEntity`, `toResponse`, `toAnonymousResponse`) |
@@ -33,12 +33,14 @@ banco [**PostgreSQL**](database.md) por meio de JDBC.
 Os services recebem `Repository` e `Validator`, os DAOs recebem
 `ConnectionManager` e os menus recebem `ConsoleView`, `CompetenceCatalog` e `EntityFinder`, todos pelo construtor.
 O `Main` é o único lugar que conhece as implementações concretas. Ele monta as dependências
-(`DatabaseConfig` → `DatabaseConnection` → DAOs → validadores e services → menus) e inicia o `MainMenu`.
+(`DatabaseConfig` → `ConnectionFactory` → `DatabaseConnection` → DAOs → validadores e services → menus) e inicia o `MainMenu`.
 
 ## Integração com o banco (JDBC)
 
-- **`DatabaseConfig`** lê a configuração (`DB_URL`, `DB_USER`, `DB_PASSWORD`, com valores padrão).
-- **`DatabaseConnection`** implementa a interface `ConnectionManager`: abre as conexões com `DriverManager` e
+- **`DatabaseConfig`** lê a configuração (`DB_TYPE`, `DB_URL`, `DB_USER`, `DB_PASSWORD`, com valores padrão).
+- **`ConnectionFactories`** escolhe a fábrica de conexões pelo tipo do banco (`DB_TYPE`, hoje só `postgresql`).
+  A **`PostgresConnectionFactory`** implementa `ConnectionFactory` e é a única classe que chama o `DriverManager`.
+- **`DatabaseConnection`** implementa a interface `ConnectionManager`: pede as conexões à `ConnectionFactory` e
   oferece `withConnection` (abre, usa e fecha a conexão) e `withTransaction` (faz `commit` se tudo der certo e
   `rollback` se algo falhar).
 - **`SqlExecutor`** concentra o código JDBC repetitivo (`insertReturningId`, `update`, `query`, `queryFirst`):
@@ -136,7 +138,7 @@ Os testes unitários usam Spock. Nos serviços, os repositórios são substituí
 | `CpfValidatorSpec`, `CnpjValidatorSpec`, `CheckDigitSpec`, `EmailValidatorSpec`, `PasswordValidatorSpec`, `AddressValidatorSpec`, `DocumentNormalizerSpec` | Formatos e dígitos verificadores, valores válidos, inválidos e nulos |
 | `CandidateMapperSpec`, `EnterpriseMapperSpec`, `VacancyMapperSpec`, `AddressMapperSpec`, `CompetenceMapperSpec` | Conversão de request para entidade e de entidade para resposta, respostas sem senha e anônimas sem dados pessoais, status da vaga |
 | `EnterpriseSpec`, `CandidateSpec`, `CompetenceSpec` | Relação empresa–vagas, cálculo da idade e igualdade de competências sem diferenciar maiúsculas |
-| `SqlExecutorSpec`, `SqlExceptionTranslatorSpec`, `DatabaseConfigSpec` | Ligação dos parâmetros, leitura das linhas e fechamento dos recursos (com mocks de JDBC), tradução dos erros do banco, configuração com e sem variáveis de ambiente |
+| `SqlExecutorSpec`, `SqlExceptionTranslatorSpec`, `DatabaseConfigSpec`, `ConnectionFactoriesSpec`, `DatabaseConnectionSpec` | Ligação dos parâmetros, leitura das linhas e fechamento dos recursos (com mocks de JDBC), tradução dos erros do banco, configuração com e sem variáveis de ambiente, escolha da fábrica pelo tipo do banco, `commit`/`rollback` das transações |
 | `MenuSpec`, `MainMenuSpec`, `ConsoleInputSpec`, `FormSpec`, `ResponseFormatterSpec` | Loop do menu e mensagens na tela, menu principal com qualquer lista de submenus, leitura do teclado, formulários e formatação |
 
 Para rodar os testes: `./gradlew test`.
@@ -163,7 +165,8 @@ Linketinder/
     │   │                  VacancyRepository, CompetenceRepository
     │   ├── exception/     BusinessException, ValidationException, EntityNotFoundException,
     │   │                  DuplicateEntityException, EntityInUseException
-    │   ├── dao/           ConnectionManager, DatabaseConnection, DatabaseConfig, SqlExecutor, SqlExceptionTranslator,
+    │   ├── dao/           ConnectionManager, DatabaseConnection, DatabaseConfig, ConnectionFactory,
+    │   │                  PostgresConnectionFactory, ConnectionFactories, SqlExecutor, SqlExceptionTranslator,
     │   │                  PersonDAO, CandidateDAO, EnterpriseDAO, VacancyDAO, CompetenceDAO, CompetenceLinkDAO,
     │   │                  AddressDAO, CompetenceLink
     │   ├── model/         Person, AbstractPerson, PersonType, Address, Candidate, Enterprise, Vacancy,
@@ -177,7 +180,8 @@ Linketinder/
     │                      AddressValidator, DocumentNormalizer
     └── test/groovy/com/mariajuliasales/
         ├── fixture/       TestData
-        ├── dao/           SqlExecutorSpec, SqlExceptionTranslatorSpec, DatabaseConfigSpec
+        ├── dao/           SqlExecutorSpec, SqlExceptionTranslatorSpec, DatabaseConfigSpec, ConnectionFactoriesSpec,
+        │                  DatabaseConnectionSpec
         ├── menu/          MenuSpec, MainMenuSpec, ConsoleInputSpec, FormSpec, ResponseFormatterSpec
         ├── model/         EnterpriseSpec, CandidateSpec, CompetenceSpec
         ├── mapper/        CandidateMapperSpec, EnterpriseMapperSpec, VacancyMapperSpec, AddressMapperSpec,

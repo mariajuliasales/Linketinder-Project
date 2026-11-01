@@ -50,6 +50,7 @@ Por padrão, a aplicação conecta em `jdbc:postgresql://localhost:5432/linketin
 `postgres`. Para usar outros valores, defina as variáveis de ambiente antes do `run`:
 
 ```bash
+export DB_TYPE=postgresql
 export DB_URL=jdbc:postgresql://localhost:5432/linketinder
 export DB_USER=postgres
 export DB_PASSWORD=sua_senha
