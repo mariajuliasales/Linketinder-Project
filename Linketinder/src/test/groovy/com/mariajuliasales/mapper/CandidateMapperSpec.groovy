@@ -51,6 +51,7 @@ class CandidateMapperSpec extends Specification {
 		response.name() == candidate.name
 		response.email() == candidate.email
 		response.cpf() == candidate.cpf
+		response.birthDate() == candidate.birthDate
 		response.age() == candidate.age
 		response.address().city() == "São Paulo"
 		response.competences() == ["Java"]
