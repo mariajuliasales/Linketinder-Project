@@ -7,9 +7,10 @@ class DatabaseConfigSpec extends Specification {
 	def "configuration should use the values from the environment"() {
 		when:
 		DatabaseConfig config = DatabaseConfig.fromEnvironment(
-				DB_URL: 'jdbc:postgresql://db:5432/test', DB_USER: 'admin', DB_PASSWORD: 'secret')
+				DB_TYPE: 'postgresql', DB_URL: 'jdbc:postgresql://db:5432/test', DB_USER: 'admin', DB_PASSWORD: 'secret')
 
 		then:
+		config.type == 'postgresql'
 		config.url == 'jdbc:postgresql://db:5432/test'
 		config.user == 'admin'
 		config.password == 'secret'
@@ -20,6 +21,7 @@ class DatabaseConfigSpec extends Specification {
 		DatabaseConfig config = DatabaseConfig.fromEnvironment([:])
 
 		then:
+		config.type == 'postgresql'
 		config.url == 'jdbc:postgresql://localhost:5432/linketinder'
 		config.user == 'postgres'
 		config.password == 'postgres'
