@@ -15,6 +15,9 @@ A identidade dos dois lados só é revelada depois de um match.
 
 > O backend salva os dados no PostgreSQL. O frontend ainda não se comunica com o backend.
 
+O projeto segue o padrão **MVC**: o menu do terminal e o frontend são a View, os controllers do backend recebem os
+pedidos, e o Model reúne entidades, services e persistência.
+
 ## Como executar
 
 ### Pré-requisitos
@@ -50,6 +53,7 @@ Por padrão, a aplicação conecta em `jdbc:postgresql://localhost:5432/linketin
 `postgres`. Para usar outros valores, defina as variáveis de ambiente antes do `run`:
 
 ```bash
+export DB_TYPE=postgresql
 export DB_URL=jdbc:postgresql://localhost:5432/linketinder
 export DB_USER=postgres
 export DB_PASSWORD=sua_senha

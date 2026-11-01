@@ -36,6 +36,7 @@ final class CandidateMapper {
 				candidate.description,
 				CompetenceMapper.toNames(candidate.competences),
 				candidate.cpf,
+				candidate.birthDate,
 				candidate.age,
 				candidate.training
 				)

@@ -17,28 +17,33 @@ banco [**PostgreSQL**](database.md) por meio de JDBC.
 
 ## Arquitetura
 
+O backend segue o padrão **MVC**. A **View** é o menu do terminal, o **Controller** recebe os pedidos da View, e o **Model** reúne as entidades, os services e a persistência.
+
 | Camada | Classes | Responsabilidade |
 |--------|---------|------------------|
-| **Menu** | `Menu`, `MainMenu`, `CandidateMenu`, `EnterpriseMenu`, `VacancyMenu`, `CompetenceMenu`, `MenuOption`, `ConsoleInput`, `ConsoleView`, `ResponseFormatter`, `AddressForm`, `CompetenceForm` | Interação com o usuário no terminal: um menu por assunto, leitura do teclado, escrita na tela, formatação dos DTOs e formulários reutilizáveis |
-| **Service** | `CrudService`, `CandidateService`, `EnterpriseService`, `VacancyService`, `CompetenceService`, `EntityFinder`, `CompetenceCatalog` | Regras de negócio: valida, chama o repositório e trata registro inexistente ou duplicado |
+| **View** | `Menu`, `MainMenu`, `CandidateMenu`, `EnterpriseMenu`, `VacancyMenu`, `CompetenceMenu`, `MenuOption`, `ConsoleInput`, `ConsoleView`, `ResponseFormatter`, `AddressForm`, `CompetenceForm` | Interação com o usuário no terminal: um menu por assunto, leitura do teclado, escrita na tela e formatação dos DTOs. Fala só com os controllers e só com DTOs |
+| **Controller** | `CandidateController`, `EnterpriseController`, `VacancyController`, `CompetenceController`, `CompetenceCatalog` | Recebe os requests da View, converte em entidades com os mappers, chama os services e devolve DTOs de resposta |
+| **Service** | `CrudService`, `CandidateService`, `EnterpriseService`, `VacancyService`, `CompetenceService` | Regras de negócio: valida, chama o repositório e trata registro inexistente ou duplicado |
 | **Validator** | `Validator`, `PersonValidator`, `CandidateValidator`, `EnterpriseValidator`, `VacancyValidator`, `CompetenceValidator`, `Validation` | Regras de validação de cada entidade, injetadas nos services pela interface `Validator<T>` |
 | **Repository** | `Repository`, `PersonRepository`, `CandidateRepository`, `EnterpriseRepository`, `VacancyRepository`, `CompetenceRepository` | Contratos de persistência usados pelos services, sem saber se os dados vêm de JDBC ou de outro lugar. Além do CRUD, tem: `findByEmail`, `findByCpf`, `findByCompetence`, `findByCnpj` |
 | **Exception** | `BusinessException`, `ValidationException`, `EntityNotFoundException`, `DuplicateEntityException`, `EntityInUseException` | Erros de negócio, cada um correspondendo a um status HTTP (400, 404 e 409) |
-| **DAO** | `ConnectionManager`, `DatabaseConnection`, `DatabaseConfig`, `SqlExecutor`, `SqlExceptionTranslator`, `PersonDAO`, `CandidateDAO`, `EnterpriseDAO`, `VacancyDAO`, `CompetenceDAO`, `CompetenceLinkDAO`, `AddressDAO`, `CompetenceLink` | Implementação JDBC dos repositórios: configuração e conexão com o banco, execução do SQL e tradução dos erros do banco |
+| **DAO** | `ConnectionManager`, `DatabaseConnection`, `DatabaseConfig`, `ConnectionFactory`, `PostgresConnectionFactory`, `ConnectionFactories`, `SqlExecutor`, `SqlExceptionTranslator`, `PersonDAO`, `CandidateDAO`, `EnterpriseDAO`, `VacancyDAO`, `CompetenceDAO`, `CompetenceLinkDAO`, `AddressDAO`, `CompetenceLink` | Implementação JDBC dos repositórios: configuração e conexão com o banco, execução do SQL e tradução dos erros do banco |
 | **Model** | `Person`, `AbstractPerson`, `PersonType`, `Address`, `Candidate`, `Enterprise`, `Vacancy`, `Competence`, `VacancyStatus` | Entidades do domínio: só dados e regras, sem formatação de texto |
-| **DTO** | `CandidateRequest`, `EnterpriseRequest`, `VacancyRequest`, `AddressRequest`, `CandidateResponse`, `CandidateAnonymousResponse`, `EnterpriseResponse`, `EnterpriseAnonymousResponse`, `VacancyAnonymousResponse`, `AddressResponse` | Records de entrada e saída. Os anônimos não têm dados que identifiquem a pessoa ou a empresa, e nenhuma resposta tem senha |
+| **DTO** | `CandidateRequest`, `EnterpriseRequest`, `VacancyRequest`, `AddressRequest`, `CandidateResponse`, `CandidateAnonymousResponse`, `EnterpriseResponse`, `EnterpriseAnonymousResponse`, `VacancyAnonymousResponse`, `AddressResponse`, `CompetenceResponse` | Records de entrada e saída. Os anônimos não têm dados que identifiquem a pessoa ou a empresa, e nenhuma resposta tem senha |
 | **Mapper** | `CandidateMapper`, `EnterpriseMapper`, `VacancyMapper`, `AddressMapper`, `CompetenceMapper` | Converte entre DTOs e entidades (`toEntity`, `toResponse`, `toAnonymousResponse`) |
 | **Util** | `CpfValidator`, `CnpjValidator`, `EmailValidator`, `PasswordValidator`, `AddressValidator`, `CheckDigit`, `DocumentNormalizer` | Validação de CPF, CNPJ, e-mail, senha, CEP e UF, e remoção de máscara dos documentos |
 
 Os services recebem `Repository` e `Validator`, os DAOs recebem
-`ConnectionManager` e os menus recebem `ConsoleView`, `CompetenceCatalog` e `EntityFinder`, todos pelo construtor.
+`ConnectionManager`, os controllers recebem os services e os menus recebem os controllers, todos pelo construtor.
 O `Main` é o único lugar que conhece as implementações concretas. Ele monta as dependências
-(`DatabaseConfig` → `DatabaseConnection` → DAOs → validadores e services → menus) e inicia o `MainMenu`.
+(`DatabaseConfig` → `ConnectionFactory` → `DatabaseConnection` → DAOs → validadores e services → controllers → menus) e inicia o `MainMenu`.
 
 ## Integração com o banco (JDBC)
 
-- **`DatabaseConfig`** lê a configuração (`DB_URL`, `DB_USER`, `DB_PASSWORD`, com valores padrão).
-- **`DatabaseConnection`** implementa a interface `ConnectionManager`: abre as conexões com `DriverManager` e
+- **`DatabaseConfig`** lê a configuração (`DB_TYPE`, `DB_URL`, `DB_USER`, `DB_PASSWORD`, com valores padrão).
+- **`ConnectionFactories`** escolhe a fábrica de conexões pelo tipo do banco (`DB_TYPE`, hoje só `postgresql`).
+  A **`PostgresConnectionFactory`** implementa `ConnectionFactory` e é a única classe que chama o `DriverManager`.
+- **`DatabaseConnection`** implementa a interface `ConnectionManager`: pede as conexões à `ConnectionFactory` e
   oferece `withConnection` (abre, usa e fecha a conexão) e `withTransaction` (faz `commit` se tudo der certo e
   `rollback` se algo falhar).
 - **`SqlExecutor`** concentra o código JDBC repetitivo (`insertReturningId`, `update`, `query`, `queryFirst`):
@@ -73,7 +78,7 @@ PersonType (enum): CANDIDATE, ENTERPRISE
 VacancyStatus (enum): OPEN, CLOSED, PAUSED
 ```
 
-Os models não formatam texto. Para exibir, o menu converte a entidade em um DTO de resposta com o mapper
+Os models não formatam texto. Para exibir, o controller converte a entidade em um DTO de resposta com o mapper
 (ex.: `CandidateMapper.toAnonymousResponse`), o `ResponseFormatter` monta o texto e o `ConsoleView` escreve na tela.
 
 ## Funcionalidades do menu
@@ -136,7 +141,8 @@ Os testes unitários usam Spock. Nos serviços, os repositórios são substituí
 | `CpfValidatorSpec`, `CnpjValidatorSpec`, `CheckDigitSpec`, `EmailValidatorSpec`, `PasswordValidatorSpec`, `AddressValidatorSpec`, `DocumentNormalizerSpec` | Formatos e dígitos verificadores, valores válidos, inválidos e nulos |
 | `CandidateMapperSpec`, `EnterpriseMapperSpec`, `VacancyMapperSpec`, `AddressMapperSpec`, `CompetenceMapperSpec` | Conversão de request para entidade e de entidade para resposta, respostas sem senha e anônimas sem dados pessoais, status da vaga |
 | `EnterpriseSpec`, `CandidateSpec`, `CompetenceSpec` | Relação empresa–vagas, cálculo da idade e igualdade de competências sem diferenciar maiúsculas |
-| `SqlExecutorSpec`, `SqlExceptionTranslatorSpec`, `DatabaseConfigSpec` | Ligação dos parâmetros, leitura das linhas e fechamento dos recursos (com mocks de JDBC), tradução dos erros do banco, configuração com e sem variáveis de ambiente |
+| `SqlExecutorSpec`, `SqlExceptionTranslatorSpec`, `DatabaseConfigSpec`, `ConnectionFactoriesSpec`, `DatabaseConnectionSpec` | Ligação dos parâmetros, leitura das linhas e fechamento dos recursos (com mocks de JDBC), tradução dos erros do banco, configuração com e sem variáveis de ambiente, escolha da fábrica pelo tipo do banco, `commit`/`rollback` das transações |
+| `CandidateControllerSpec`, `EnterpriseControllerSpec`, `VacancyControllerSpec`, `CompetenceControllerSpec` | Fluxo completo de request → service → repositório → resposta, dados inválidos sem chegar ao repositório, registro inexistente e vaga ligada à empresa |
 | `MenuSpec`, `MainMenuSpec`, `ConsoleInputSpec`, `FormSpec`, `ResponseFormatterSpec` | Loop do menu e mensagens na tela, menu principal com qualquer lista de submenus, leitura do teclado, formulários e formatação |
 
 Para rodar os testes: `./gradlew test`.
@@ -152,18 +158,20 @@ Linketinder/
 └── src/
     ├── main/groovy/com/mariajuliasales/
     │   ├── Main.groovy
-    │   ├── menu/          Menu, MainMenu, CandidateMenu, EnterpriseMenu, VacancyMenu, CompetenceMenu,
+    │   ├── view/          Menu, MainMenu, CandidateMenu, EnterpriseMenu, VacancyMenu, CompetenceMenu,
     │   │                  MenuOption, ConsoleInput, ConsoleView, ResponseFormatter, AddressForm, CompetenceForm,
     │   │                  EndOfInputException
-    │   ├── service/       CrudService, CandidateService, EnterpriseService, VacancyService, CompetenceService,
-    │   │   │              EntityFinder, CompetenceCatalog
+    │   ├── controller/    CandidateController, EnterpriseController, VacancyController, CompetenceController,
+    │   │                  CompetenceCatalog
+    │   ├── service/       CrudService, CandidateService, EnterpriseService, VacancyService, CompetenceService
     │   │   └── validator/ Validator, PersonValidator, CandidateValidator, EnterpriseValidator, VacancyValidator,
     │   │                  CompetenceValidator, Validation
     │   ├── repository/    Repository, PersonRepository, CandidateRepository, EnterpriseRepository,
     │   │                  VacancyRepository, CompetenceRepository
     │   ├── exception/     BusinessException, ValidationException, EntityNotFoundException,
     │   │                  DuplicateEntityException, EntityInUseException
-    │   ├── dao/           ConnectionManager, DatabaseConnection, DatabaseConfig, SqlExecutor, SqlExceptionTranslator,
+    │   ├── dao/           ConnectionManager, DatabaseConnection, DatabaseConfig, ConnectionFactory,
+    │   │                  PostgresConnectionFactory, ConnectionFactories, SqlExecutor, SqlExceptionTranslator,
     │   │                  PersonDAO, CandidateDAO, EnterpriseDAO, VacancyDAO, CompetenceDAO, CompetenceLinkDAO,
     │   │                  AddressDAO, CompetenceLink
     │   ├── model/         Person, AbstractPerson, PersonType, Address, Candidate, Enterprise, Vacancy,
@@ -171,14 +179,18 @@ Linketinder/
     │   ├── dto/
     │   │   ├── request/   CandidateRequest, EnterpriseRequest, VacancyRequest, AddressRequest
     │   │   └── response/  CandidateResponse, CandidateAnonymousResponse, EnterpriseResponse,
-    │   │                  EnterpriseAnonymousResponse, VacancyAnonymousResponse, AddressResponse
+    │   │                  EnterpriseAnonymousResponse, VacancyAnonymousResponse, AddressResponse,
+    │   │                  CompetenceResponse
     │   ├── mapper/        CandidateMapper, EnterpriseMapper, VacancyMapper, AddressMapper, CompetenceMapper
     │   └── util/          CpfValidator, CnpjValidator, CheckDigit, EmailValidator, PasswordValidator,
     │                      AddressValidator, DocumentNormalizer
     └── test/groovy/com/mariajuliasales/
         ├── fixture/       TestData
-        ├── dao/           SqlExecutorSpec, SqlExceptionTranslatorSpec, DatabaseConfigSpec
-        ├── menu/          MenuSpec, MainMenuSpec, ConsoleInputSpec, FormSpec, ResponseFormatterSpec
+        ├── dao/           SqlExecutorSpec, SqlExceptionTranslatorSpec, DatabaseConfigSpec, ConnectionFactoriesSpec,
+        │                  DatabaseConnectionSpec
+        ├── controller/    CandidateControllerSpec, EnterpriseControllerSpec, VacancyControllerSpec,
+        │                  CompetenceControllerSpec
+        ├── view/          MenuSpec, MainMenuSpec, ConsoleInputSpec, FormSpec, ResponseFormatterSpec
         ├── model/         EnterpriseSpec, CandidateSpec, CompetenceSpec
         ├── mapper/        CandidateMapperSpec, EnterpriseMapperSpec, VacancyMapperSpec, AddressMapperSpec,
         │                  CompetenceMapperSpec

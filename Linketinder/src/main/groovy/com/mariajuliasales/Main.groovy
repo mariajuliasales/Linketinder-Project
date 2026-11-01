@@ -1,22 +1,17 @@
 package com.mariajuliasales
 
+import com.mariajuliasales.controller.CandidateController
+import com.mariajuliasales.controller.CompetenceController
+import com.mariajuliasales.controller.EnterpriseController
+import com.mariajuliasales.controller.VacancyController
 import com.mariajuliasales.dao.CandidateDAO
 import com.mariajuliasales.dao.CompetenceDAO
 import com.mariajuliasales.dao.CompetenceLinkDAO
+import com.mariajuliasales.dao.ConnectionFactories
 import com.mariajuliasales.dao.DatabaseConfig
 import com.mariajuliasales.dao.DatabaseConnection
 import com.mariajuliasales.dao.EnterpriseDAO
 import com.mariajuliasales.dao.VacancyDAO
-import com.mariajuliasales.menu.AddressForm
-import com.mariajuliasales.menu.CandidateMenu
-import com.mariajuliasales.menu.CompetenceForm
-import com.mariajuliasales.menu.CompetenceMenu
-import com.mariajuliasales.menu.ConsoleInput
-import com.mariajuliasales.menu.ConsoleView
-import com.mariajuliasales.menu.EndOfInputException
-import com.mariajuliasales.menu.EnterpriseMenu
-import com.mariajuliasales.menu.MainMenu
-import com.mariajuliasales.menu.VacancyMenu
 import com.mariajuliasales.service.CandidateService
 import com.mariajuliasales.service.CompetenceService
 import com.mariajuliasales.service.EnterpriseService
@@ -26,6 +21,16 @@ import com.mariajuliasales.service.validator.CompetenceValidator
 import com.mariajuliasales.service.validator.EnterpriseValidator
 import com.mariajuliasales.service.validator.PersonValidator
 import com.mariajuliasales.service.validator.VacancyValidator
+import com.mariajuliasales.view.AddressForm
+import com.mariajuliasales.view.CandidateMenu
+import com.mariajuliasales.view.CompetenceForm
+import com.mariajuliasales.view.CompetenceMenu
+import com.mariajuliasales.view.ConsoleInput
+import com.mariajuliasales.view.ConsoleView
+import com.mariajuliasales.view.EndOfInputException
+import com.mariajuliasales.view.EnterpriseMenu
+import com.mariajuliasales.view.MainMenu
+import com.mariajuliasales.view.VacancyMenu
 
 static void main(String[] args) {
 	try {
@@ -40,8 +45,9 @@ static void main(String[] args) {
 }
 
 static DatabaseConnection connectToDatabase() {
-	DatabaseConnection database = new DatabaseConnection(DatabaseConfig.fromEnvironment())
-	database.withConnection { println "Conectado ao banco: ${database.config.url}" }
+	DatabaseConfig config = DatabaseConfig.fromEnvironment()
+	DatabaseConnection database = new DatabaseConnection(ConnectionFactories.forConfig(config))
+	database.withConnection { println "Conectado ao banco: ${config.url}" }
 	database
 }
 
@@ -58,15 +64,20 @@ static MainMenu buildMainMenu(DatabaseConnection database) {
 	VacancyService vacancyService = new VacancyService(vacancyDAO, new VacancyValidator())
 	CompetenceService competenceService = new CompetenceService(competenceDAO, new CompetenceValidator())
 
+	CandidateController candidateController = new CandidateController(candidateService)
+	EnterpriseController enterpriseController = new EnterpriseController(enterpriseService)
+	VacancyController vacancyController = new VacancyController(vacancyService, enterpriseService)
+	CompetenceController competenceController = new CompetenceController(competenceService)
+
 	ConsoleInput input = new ConsoleInput()
 	ConsoleView view = new ConsoleView()
 	AddressForm addressForm = new AddressForm(input, view)
-	CompetenceForm competenceForm = new CompetenceForm(input, view, competenceService)
+	CompetenceForm competenceForm = new CompetenceForm(input, view, competenceController)
 
 	new MainMenu(input, view, [
-		new CandidateMenu(input, view, candidateService, addressForm, competenceForm),
-		new EnterpriseMenu(input, view, enterpriseService, addressForm, competenceForm),
-		new VacancyMenu(input, view, vacancyService, enterpriseService, competenceForm),
-		new CompetenceMenu(input, view, competenceService)
+		new CandidateMenu(input, view, candidateController, addressForm, competenceForm),
+		new EnterpriseMenu(input, view, enterpriseController, addressForm, competenceForm),
+		new VacancyMenu(input, view, vacancyController, enterpriseController, competenceForm),
+		new CompetenceMenu(input, view, competenceController)
 	])
 }
