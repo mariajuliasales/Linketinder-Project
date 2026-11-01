@@ -1,4 +1,4 @@
-package com.mariajuliasales.menu
+package com.mariajuliasales.view
 
 class EndOfInputException extends RuntimeException {
 

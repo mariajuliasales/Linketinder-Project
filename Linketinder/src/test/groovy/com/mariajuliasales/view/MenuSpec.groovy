@@ -1,4 +1,4 @@
-package com.mariajuliasales.menu
+package com.mariajuliasales.view
 
 import com.mariajuliasales.exception.ValidationException
 import spock.lang.Specification

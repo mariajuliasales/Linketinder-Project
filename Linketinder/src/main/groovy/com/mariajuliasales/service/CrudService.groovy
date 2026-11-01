@@ -6,7 +6,7 @@ import com.mariajuliasales.service.validator.Validator
 
 import static com.mariajuliasales.exception.EntityNotFoundException.requireFound
 
-class CrudService<T> implements EntityFinder<T> {
+class CrudService<T> {
 
 	protected final Repository<T> repository
 	protected final Validator<T> validator
@@ -28,7 +28,6 @@ class CrudService<T> implements EntityFinder<T> {
 		repository.findAll()
 	}
 
-	@Override
 	T findById(int id) {
 		requireFound(repository.findById(id), entityName, id)
 	}

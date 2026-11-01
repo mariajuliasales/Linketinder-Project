@@ -1,4 +1,4 @@
-package com.mariajuliasales.menu
+package com.mariajuliasales.view
 
 import com.mariajuliasales.dto.response.AddressResponse
 import com.mariajuliasales.dto.response.CandidateAnonymousResponse

@@ -1,6 +1,5 @@
-package com.mariajuliasales.menu
+package com.mariajuliasales.view
 
-import com.mariajuliasales.model.VacancyStatus
 import spock.lang.Specification
 
 import java.time.LocalDate
@@ -40,11 +39,14 @@ class ConsoleInputSpec extends Specification {
 		inputWith('').readDate('Nascimento', current) == current
 	}
 
-	def "read status should accept any case, keep the current one on Enter and ask again when invalid"() {
+	def "read option should accept any case, keep the current one on Enter and ask again when invalid"() {
+		given:
+		List<String> statuses = ['OPEN', 'CLOSED', 'PAUSED']
+
 		expect:
-		inputWith('closed').readStatus(VacancyStatus.OPEN) == VacancyStatus.CLOSED
-		inputWith('').readStatus(VacancyStatus.PAUSED) == VacancyStatus.PAUSED
-		inputWith('ARCHIVED', 'paused').readStatus(VacancyStatus.OPEN) == VacancyStatus.PAUSED
+		inputWith('closed').readOption('Status', statuses, 'OPEN') == 'CLOSED'
+		inputWith('').readOption('Status', statuses, 'PAUSED') == 'PAUSED'
+		inputWith('ARCHIVED', 'paused').readOption('Status', statuses, 'OPEN') == 'PAUSED'
 	}
 
 	def "reading after the end of the input should throw EndOfInputException"() {

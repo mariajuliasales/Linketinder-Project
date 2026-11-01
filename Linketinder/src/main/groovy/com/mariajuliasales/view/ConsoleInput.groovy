@@ -1,6 +1,4 @@
-package com.mariajuliasales.menu
-
-import com.mariajuliasales.model.VacancyStatus
+package com.mariajuliasales.view
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -57,18 +55,18 @@ class ConsoleInput {
 		}
 	}
 
-	VacancyStatus readStatus(VacancyStatus current) {
-		String prompt = "Status (${VacancyStatus.values().join(', ')}) [${current}]:"
+	String readOption(String label, List<String> options, String current) {
+		String prompt = "${label} (${options.join(', ')}) [${current}]:"
 		while (true) {
 			String value = readText(prompt)
 			if (!value) {
 				return current
 			}
-			VacancyStatus status = VacancyStatus.values().find { it.name().equalsIgnoreCase(value) }
-			if (status) {
-				return status
+			String option = options.find { String option -> option.equalsIgnoreCase(value) }
+			if (option) {
+				return option
 			}
-			out.println 'Status inválido.'
+			out.println 'Opção inválida.'
 		}
 	}
 }
