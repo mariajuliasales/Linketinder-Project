@@ -1,18 +1,17 @@
-package com.mariajuliasales.menu
+package com.mariajuliasales.view
 
+import com.mariajuliasales.controller.CompetenceCatalog
 import com.mariajuliasales.dto.request.AddressRequest
-import com.mariajuliasales.model.Competence
-import com.mariajuliasales.service.CompetenceCatalog
+import com.mariajuliasales.dto.response.AddressResponse
+import com.mariajuliasales.dto.response.CompetenceResponse
 import spock.lang.Specification
-
-import static com.mariajuliasales.fixture.TestData.validAddress
 
 class FormSpec extends Specification {
 
 	CompetenceCatalog catalog = Stub() {
 		findAll() >> [
-			new Competence(1, 'Java'),
-			new Competence(2, 'Groovy')
+			new CompetenceResponse(1, 'Java'),
+			new CompetenceResponse(2, 'Groovy')
 		]
 	}
 
@@ -37,7 +36,7 @@ class FormSpec extends Specification {
 		AddressForm form = new AddressForm(inputWith('', '', '', '', '', '', '', ''), view)
 
 		when:
-		AddressRequest request = form.read('Endereço:', validAddress())
+		AddressRequest request = form.read('Endereço:', new AddressResponse('01310-000', 'Avenida Paulista', '1000', null, 'Bela Vista', 'São Paulo', 'SP', 'Brasil'))
 
 		then:
 		request.cep() == '01310-000'
@@ -51,12 +50,12 @@ class FormSpec extends Specification {
 		CompetenceForm form = new CompetenceForm(inputWith(' Java, groovy , JAVA,, Kotlin '), view, catalog)
 
 		expect:
-		form.read('Competências:', [])*.name == ['Java', 'groovy', 'Kotlin']
+		form.read('Competências:', []) == ['Java', 'groovy', 'Kotlin']
 	}
 
 	def "competence form should keep the current competences when Enter is pressed"() {
 		given:
-		List<Competence> current = [new Competence('SQL')]
+		List<String> current = ['SQL']
 		CompetenceForm form = new CompetenceForm(inputWith(''), view, catalog)
 
 		expect:

@@ -1,8 +1,6 @@
-package com.mariajuliasales.menu
+package com.mariajuliasales.view
 
-import com.mariajuliasales.mapper.CompetenceMapper
-import com.mariajuliasales.model.Competence
-import com.mariajuliasales.service.CompetenceCatalog
+import com.mariajuliasales.controller.CompetenceCatalog
 
 class CompetenceForm {
 
@@ -16,14 +14,14 @@ class CompetenceForm {
 		this.catalog = catalog
 	}
 
-	List<Competence> read(String label, List<Competence> current) {
-		view.showMessage("Competências disponíveis: ${CompetenceMapper.toNames(catalog.findAll()).join(', ')}")
+	List<String> read(String label, List<String> current) {
+		view.showMessage("Competências disponíveis: ${catalog.findAll()*.name().join(', ')}")
 		String typed = input.readText(current ? "${label} [${current.join(', ')}]:" : label)
 		typed ? parse(typed) : current
 	}
 
-	private static List<Competence> parse(String typed) {
+	private static List<String> parse(String typed) {
 		List<String> names = typed.split(',')*.trim().findAll { String name -> name }
-		CompetenceMapper.toEntities(names).unique()
+		names.unique { String name -> name.toLowerCase() }
 	}
 }

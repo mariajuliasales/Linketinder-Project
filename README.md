@@ -15,6 +15,9 @@ A identidade dos dois lados só é revelada depois de um match.
 
 > O backend salva os dados no PostgreSQL. O frontend ainda não se comunica com o backend.
 
+O projeto segue o padrão **MVC**: o menu do terminal e o frontend são a View, os controllers do backend recebem os
+pedidos, e o Model reúne entidades, services e persistência.
+
 ## Como executar
 
 ### Pré-requisitos

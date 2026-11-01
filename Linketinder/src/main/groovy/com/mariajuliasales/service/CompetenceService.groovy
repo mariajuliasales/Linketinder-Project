@@ -5,7 +5,7 @@ import com.mariajuliasales.model.Competence
 import com.mariajuliasales.repository.CompetenceRepository
 import com.mariajuliasales.service.validator.Validator
 
-class CompetenceService extends CrudService<Competence> implements CompetenceCatalog {
+class CompetenceService extends CrudService<Competence> {
 
 	private final CompetenceRepository competenceRepository
 
