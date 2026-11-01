@@ -3,6 +3,7 @@ package com.mariajuliasales
 import com.mariajuliasales.dao.CandidateDAO
 import com.mariajuliasales.dao.CompetenceDAO
 import com.mariajuliasales.dao.CompetenceLinkDAO
+import com.mariajuliasales.dao.ConnectionFactories
 import com.mariajuliasales.dao.DatabaseConfig
 import com.mariajuliasales.dao.DatabaseConnection
 import com.mariajuliasales.dao.EnterpriseDAO
@@ -40,8 +41,9 @@ static void main(String[] args) {
 }
 
 static DatabaseConnection connectToDatabase() {
-	DatabaseConnection database = new DatabaseConnection(DatabaseConfig.fromEnvironment())
-	database.withConnection { println "Conectado ao banco: ${database.config.url}" }
+	DatabaseConfig config = DatabaseConfig.fromEnvironment()
+	DatabaseConnection database = new DatabaseConnection(ConnectionFactories.forConfig(config))
+	database.withConnection { println "Conectado ao banco: ${config.url}" }
 	database
 }
 

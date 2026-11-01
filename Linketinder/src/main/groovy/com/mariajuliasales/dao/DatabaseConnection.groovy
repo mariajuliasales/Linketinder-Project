@@ -1,21 +1,20 @@
 package com.mariajuliasales.dao
 
 import java.sql.Connection
-import java.sql.DriverManager
 import java.sql.SQLException
 
 class DatabaseConnection implements ConnectionManager {
 
-	final DatabaseConfig config
+	private final ConnectionFactory connectionFactory
 
-	DatabaseConnection(DatabaseConfig config) {
-		this.config = config
+	DatabaseConnection(ConnectionFactory connectionFactory) {
+		this.connectionFactory = connectionFactory
 	}
 
 	@Override
 	def <T> T withConnection(Closure<T> work) {
 		try {
-			openConnection().withCloseable { Connection connection -> work(connection) }
+			connectionFactory.createConnection().withCloseable { Connection connection -> work(connection) }
 		} catch (SQLException exception) {
 			throw SqlExceptionTranslator.translate(exception)
 		}
@@ -34,10 +33,6 @@ class DatabaseConnection implements ConnectionManager {
 				throw exception
 			}
 		}
-	}
-
-	private Connection openConnection() {
-		DriverManager.getConnection(config.url, config.user, config.password)
 	}
 
 	private static void rollback(Connection connection, Exception cause) {
