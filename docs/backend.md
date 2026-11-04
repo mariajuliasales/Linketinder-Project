@@ -22,7 +22,8 @@ O backend segue o padrão **MVC**. A **View** é o menu do terminal, o **Control
 | Camada | Classes | Responsabilidade |
 |--------|---------|------------------|
 | **View** | `Menu`, `MainMenu`, `CandidateMenu`, `EnterpriseMenu`, `VacancyMenu`, `CompetenceMenu`, `MenuOption`, `ConsoleInput`, `ConsoleView`, `ResponseFormatter`, `AddressForm`, `CompetenceForm` | Interação com o usuário no terminal: um menu por assunto, leitura do teclado, escrita na tela e formatação dos DTOs. Fala só com os controllers e só com DTOs |
-| **Controller** | `CandidateController`, `EnterpriseController`, `VacancyController`, `CompetenceController`, `CompetenceCatalog` | Recebe os requests da View, converte em entidades com os mappers, chama os services e devolve DTOs de resposta |
+| **API** | `CandidateServlet`, `EnterpriseServlet`, `VacancyServlet`, `JsonResponse` | API REST com Tomcat embutido e Servlets: lê o JSON, chama os controllers e responde com o status HTTP adequado (veja [api.md](api.md)) |
+| **Controller** | `CandidateController`, `EnterpriseController`, `VacancyController`, `CompetenceController`, `CompetenceCatalog`, `Controllers` | Recebe os requests da View, converte em entidades com os mappers, chama os services e devolve DTOs de resposta |
 | **Service** | `CrudService`, `CandidateService`, `EnterpriseService`, `VacancyService`, `CompetenceService` | Regras de negócio: valida, chama o repositório e trata registro inexistente ou duplicado |
 | **Validator** | `Validator`, `PersonValidator`, `CandidateValidator`, `EnterpriseValidator`, `VacancyValidator`, `CompetenceValidator`, `Validation` | Regras de validação de cada entidade, injetadas nos services pela interface `Validator<T>` |
 | **Repository** | `Repository`, `PersonRepository`, `CandidateRepository`, `EnterpriseRepository`, `VacancyRepository`, `CompetenceRepository` | Contratos de persistência usados pelos services, sem saber se os dados vêm de JDBC ou de outro lugar. Além do CRUD, tem: `findByEmail`, `findByCpf`, `findByCompetence`, `findByCnpj` |
@@ -143,6 +144,8 @@ Os testes unitários usam Spock. Nos serviços, os repositórios são substituí
 | `EnterpriseSpec`, `CandidateSpec`, `CompetenceSpec` | Relação empresa–vagas, cálculo da idade e igualdade de competências sem diferenciar maiúsculas |
 | `SqlExecutorSpec`, `SqlExceptionTranslatorSpec`, `DatabaseConfigSpec`, `ConnectionFactoriesSpec`, `DatabaseConnectionSpec` | Ligação dos parâmetros, leitura das linhas e fechamento dos recursos (com mocks de JDBC), tradução dos erros do banco, configuração com e sem variáveis de ambiente, escolha da fábrica pelo tipo do banco, `commit`/`rollback` das transações |
 | `CandidateControllerSpec`, `EnterpriseControllerSpec`, `VacancyControllerSpec`, `CompetenceControllerSpec` | Fluxo completo de request → service → repositório → resposta, dados inválidos sem chegar ao repositório, registro inexistente e vaga ligada à empresa |
+| `CandidateServletSpec`, `EnterpriseServletSpec`, `VacancyServletSpec` | Leitura do JSON, resposta `201` com `Location`, e erros `400`, `404` e `409` (requisição e resposta HTTP simuladas, sem subir o Tomcat) |
+| `JsonResponseSpec` | Escrita do JSON (data ISO, acentos) e conversão de cada exceção em status HTTP |
 | `MenuSpec`, `MainMenuSpec`, `ConsoleInputSpec`, `FormSpec`, `ResponseFormatterSpec` | Loop do menu e mensagens na tela, menu principal com qualquer lista de submenus, leitura do teclado, formulários e formatação |
 
 Para rodar os testes: `./gradlew test`.
@@ -157,12 +160,13 @@ Linketinder/
 ├── gradlew / gradlew.bat
 └── src/
     ├── main/groovy/com/mariajuliasales/
-    │   ├── Main.groovy
+    │   ├── Main.groovy, ApiMain.groovy, Application.groovy
+    │   ├── api/           CandidateServlet, EnterpriseServlet, VacancyServlet, JsonResponse
     │   ├── view/          Menu, MainMenu, CandidateMenu, EnterpriseMenu, VacancyMenu, CompetenceMenu,
     │   │                  MenuOption, ConsoleInput, ConsoleView, ResponseFormatter, AddressForm, CompetenceForm,
     │   │                  EndOfInputException
     │   ├── controller/    CandidateController, EnterpriseController, VacancyController, CompetenceController,
-    │   │                  CompetenceCatalog
+    │   │                  CompetenceCatalog, Controllers
     │   ├── service/       CrudService, CandidateService, EnterpriseService, VacancyService, CompetenceService
     │   │   └── validator/ Validator, PersonValidator, CandidateValidator, EnterpriseValidator, VacancyValidator,
     │   │                  CompetenceValidator, Validation
@@ -188,6 +192,7 @@ Linketinder/
         ├── fixture/       TestData
         ├── dao/           SqlExecutorSpec, SqlExceptionTranslatorSpec, DatabaseConfigSpec, ConnectionFactoriesSpec,
         │                  DatabaseConnectionSpec
+        ├── api/           CandidateServletSpec, EnterpriseServletSpec, VacancyServletSpec, JsonResponseSpec
         ├── controller/    CandidateControllerSpec, EnterpriseControllerSpec, VacancyControllerSpec,
         │                  CompetenceControllerSpec
         ├── view/          MenuSpec, MainMenuSpec, ConsoleInputSpec, FormSpec, ResponseFormatterSpec

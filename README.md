@@ -9,7 +9,7 @@ A identidade dos dois lados só é revelada depois de um match.
 
 | Parte | Pasta | O que é |
 |-------|-------|---------|
-| **Backend** | [`Linketinder/`](Linketinder/) | Aplicação de terminal em **Groovy**, com menu interativo, regras de negócio, validações, testes unitários e acesso ao banco por JDBC |
+| **Backend** | [`Linketinder/`](Linketinder/) | Aplicação em **Groovy** com menu no terminal e **API REST** (Tomcat + Servlets), regras de negócio, validações, testes unitários e acesso ao banco por JDBC |
 | **Frontend** | [`Frontend/`](Frontend/) | Aplicação web em **TypeScript + Vite + Bootstrap**, com cadastro, login, listagens anônimas e gráfico de competências |
 | **Banco de dados** | [`Database/`](Database/) | Modelagem (DER) e SQL do banco **PostgreSQL**: tabelas, curtidas, match e consultas de teste |
 
@@ -46,6 +46,7 @@ cd Linketinder-Project/Linketinder
 
 ./gradlew build   # compila e roda os testes (não precisa do banco)
 ./gradlew run     # abre o menu no terminal (precisa do banco rodando)
+./gradlew runApi  # sobe a API REST em http://localhost:8080/api (precisa do banco rodando)
 ./gradlew test    # só os testes
 ```
 
@@ -60,6 +61,17 @@ export DB_PASSWORD=sua_senha
 ```
 
 No Windows, use `gradlew.bat` no lugar de `./gradlew`.
+
+#### API REST
+
+| Método | Rota | O que faz |
+|--------|------|-----------|
+| `POST` | `/api/candidates` | Cadastra um candidato |
+| `POST` | `/api/enterprises` | Cadastra uma empresa |
+| `POST` | `/api/vacancies` | Cria uma vaga (a empresa vai no campo `enterpriseId`) |
+
+Os detalhes, exemplos com `curl` e o tutorial de como a API foi feita sem frameworks estão em
+[docs/api.md](docs/api.md).
 
 ### 3. Frontend
 
