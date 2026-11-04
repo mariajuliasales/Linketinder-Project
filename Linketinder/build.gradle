@@ -12,7 +12,9 @@ repositories {
 
 dependencies {
     implementation 'org.apache.groovy:groovy:4.0.25'
+    implementation 'org.apache.groovy:groovy-json:4.0.25'
     implementation 'org.postgresql:postgresql:42.7.13'
+    implementation 'org.apache.tomcat.embed:tomcat-embed-core:10.1.34'
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -38,4 +40,12 @@ test {
     testLogging {
         events "passed", "skipped", "failed"
     }
+}
+
+tasks.register('runApi', JavaExec) {
+    group = 'application'
+    description = 'Inicia a API do Linketinder'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.mariajuliasales.ApiMain'
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
 }
