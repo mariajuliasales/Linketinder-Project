@@ -923,7 +923,83 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** ver T39.
 - **Depende de:** T36
 - **Commit sugerido:** `docs(recrutador): record acceptance criteria verification`
-- [ ] Concluída
+
+#### Resultado da conferência (2026-11-23)
+
+Execução:
+- `reset+migrar` duas vezes, num banco descartável (`linketinder_t37`, removido no fim). Nas duas vezes, e ao reaplicar
+  as migrations sobre o banco migrado, não houve erro. Contagens (áreas, recrutadores, `recruiter_like`,
+  `enterprise_like`, `candidate_like`, matches) = 7, 5, 4, 4, 5, 3, iguais em todas as rodadas.
+- `./gradlew build`: passou. `npm run build`: passou.
+- `git diff main -- Database/schema.sql Database/seed.sql Database/queries.sql`: vazio.
+
+Legenda: `test/` = `Linketinder/src/test/groovy/com/mariajuliasales/`. "Front: código" = conferido pela leitura do
+código e pelo `npm run build`; a verificação no navegador fica para T38 (regressão) e T39 (anonimato).
+
+| Critério | Atendido? | Teste que cobre | Observação |
+|---|---|---|---|
+| CA01 | sim | — (SQL) | `reset+migrar` sem erro; 7 áreas, `recruiter` e `recruiter_like` existem. Sem teste automático (AGENTS.md 12) |
+| CA02 | sim | — (SQL) | Migrations reaplicadas sem erro; contagens iguais antes e depois |
+| CA03 | sim | — (SQL) | Em transação desfeita: `CANDIDATE`/`ENTERPRISE` sem endereço rejeitados por `person_address_required_check`; `RECRUITER` aceito |
+| CA04 | sim | — (SQL) | 0 `enterprise_like` sem `recruiter_like` da empresa e 0 `recruiter_like` sem `enterprise_like` |
+| CA05 | sim | — | `linketinder.dbml` tem `recruitment_area`, `recruiter`, `recruiter_like`, a nota da invariante e as `Ref` novas |
+| CA06 | sim | `test/api/RecruiterServletSpec` "a valid JSON should save the recruiter…(CA06)"; `test/controller/RecruiterControllerSpec` "create should save the recruiter…(CA06, CA44)"; `test/service/RecruiterServiceSpec` "create should save a valid recruiter linked to the enterprise" | Front: código (`pages/recruiters.ts`) |
+| CA07 | sim | `RecruiterServiceSpec` "create should fail with 409 when the email is already in use, ignoring case"; `RecruiterServletSpec` "…409 without saving (CA07)"; `RecruiterControllerSpec` "(CA07)" | Enumeração de e-mail é limitação aceita (AGENTS.md 12) |
+| CA08 | sim | `test/service/validator/RecruiterValidatorSpec` "recruiter with invalid cpf '#cpf' should fail"; `RecruiterServletSpec` "an invalid CPF should answer 400 and a repeated CPF should answer 409 (CA08)" | O 409 de CPF vem do `SqlExceptionTranslator` (`recruiter_cpf_key`); no PostgreSQL, sem teste automático |
+| CA09 | sim | `RecruiterServiceSpec` "create should accept the CPF of an existing candidate" | `recruiter_cpf_key` é único só entre recrutadores |
+| CA10 | sim | `RecruiterValidatorSpec` "recruiter born in the future should fail", "recruiter who turns 18 today should pass", "recruiter born on #birthDate (under 18) should fail" | — |
+| CA11 | sim | `RecruiterValidatorSpec` "area '#name' outside the list or empty should fail with 'Área de recrutamento inválida'"; `test/mapper/RecruiterMapperSpec` "unknown or missing area should be mapped to null" | — |
+| CA12 | sim | `RecruiterValidatorSpec` "recruiter with invalid #field should fail with '#message'" (nome vazio, senha curta); `RecruiterServiceSpec` "create should require a password" | — |
+| CA13 | sim | `RecruiterServletSpec` "a missing enterprise should answer 404 without saving (CA13)"; `RecruiterServiceSpec` "create should fail with 404 when the enterprise does not exist" | — |
+| CA14 | sim | `RecruiterServiceSpec` "removeByEnterprise should fail with 404…another enterprise (CA14)" e "…when the recruiter does not exist"; `RecruiterControllerSpec` "(CA14)" | Mesma mensagem nos dois casos |
+| CA15 | sim | `RecruiterServiceSpec` "removeByEnterprise of the only recruiter liking the candidate…(CA15, B15)" e "…should roll back the like and match deletions…" | Front: código (`services/recruiters.ts`) |
+| CA16 | sim | `RecruiterServiceSpec` "removeByEnterprise should keep the enterprise like and the matches…(CA16)" | — |
+| CA17 | sim | `RecruiterServiceSpec` "update own profile should keep the current password…", "…save a valid new password…", "…reject a short password…"; `RecruiterControllerSpec` "updateOwnProfile…(CA17)" | Front: código (`pages/recruiterProfile.ts`). Sem rota na API, como previsto |
+| CA18 | parcial | — (front) | Front: código. `pages/register.ts` só tem "Sou candidato" e "Sou empresa". Falta a verificação no navegador (T38) |
+| CA19 | sim | `RecruiterControllerSpec` "listEnterpriseVacancies should return every vacancy…in any status (CA19, CA21)" | Front: código (`services/vacancies.ts#listEnterpriseVacanciesForRecruiter`) |
+| CA20 | sim | `RecruiterControllerSpec` "no vacancy create, update or delete operation should receive a recruiter (CA20)" | Front: código. `pages/myVacancies.ts` usa `requireLoggedEnterprise`; navegador em T38 |
+| CA21 | sim | `RecruiterControllerSpec` "(CA19, CA21)" | Front filtra por `enterpriseId` do recrutador |
+| CA22 | sim | `test/service/CandidateLikeServiceSpec` "…save the like without match when no recruiter…(B6)" e "…create the match in the same transaction…(B11)" | — |
+| CA23 | sim | `CandidateLikeServiceSpec` "like should fail with 400 and save nothing when the vacancy is #status" e "…closed between the first read and the lock" | — |
+| CA24 | sim | `CandidateLikeServiceSpec` "like should not fail when the candidate already likes the vacancy", "unlike should not fail when the candidate did not like the vacancy" | — |
+| CA25 | sim | `CandidateLikeServiceSpec` "unlike should remove only the candidate like…(B12)" | A remoção do match é cascata do banco (`vacancy_match_like_fkey`), sem teste automático |
+| CA26 | sim | `test/service/VacancyServiceSpec` "update should change the status to #status without touching likes or matches (B17)"; `CandidateLikeServiceSpec` "unlike should work whatever the vacancy status…" | — |
+| CA27 | sim | `test/service/RecruiterLikeServiceSpec` "like should save recruiter like, enterprise like and a match with each OPEN vacancy…(B1)" | — |
+| CA28 | sim | `RecruiterLikeServiceSpec` "…without match when the candidate liked no vacancy of the enterprise (B2)" | — |
+| CA29 | sim | `RecruiterLikeServiceSpec` "like by a second recruiter of the enterprise should save only the recruiter like (B3)" | — |
+| CA30 | sim | `RecruiterLikeServiceSpec` "unlike should delete only the recruiter like…(B4)" e "unlike by the last recruiter…(B5)" | — |
+| CA31 | sim | `RecruiterLikeServiceSpec` "(B7)", "(B8)", "(B10)" | — |
+| CA32 | sim | `RecruiterLikeServiceSpec` "like should fail with 400…the candidate CPF…(B9)" | — |
+| CA33 | sim | `RecruiterLikeServiceSpec` "like by an HR recruiter should create the match with an IT vacancy…(B13)" | — |
+| CA34 | sim | `RecruiterLikeServiceSpec` "like should create matches only with OPEN vacancies when liked vacancies are #liked (B14)"; `VacancyServiceSpec` "(B17)" | — |
+| CA35 | parcial | `RecruiterLikeServiceSpec` "like should roll back everything when saving a match fails (B16)" | Só com `Connection` `Mock()`; o rollback no PostgreSQL não tem teste automático (sem testes de integração, AGENTS.md 12). Já previsto na tabela abaixo |
+| CA36 | parcial | — (front) | Front: código. `pages/candidates.ts` não tem ação de curtir. Falta a verificação no navegador (T39) |
+| CA37 | sim | `test/controller/LikeControllerSpec` "recruiter should see the matched candidate revealed with only the matched vacancy", "candidate without match…should not appear in the reveal lists"; `test/service/MatchQueryServiceSpec` "match with another enterprise should not reveal the candidate to this recruiter" | Desfazer o match volta ao anônimo porque a revelação é calculada a cada consulta. Front: código |
+| CA38 | sim | `LikeControllerSpec` "enterprise should see the matched candidate revealed", "match with E1 should not reveal the candidate to E2 or its recruiters" | Front: código (`pages/candidates.ts`) |
+| CA39 | sim | `LikeControllerSpec` "candidate liked vacancies should reveal the enterprise only on the matched vacancy"; `MatchQueryServiceSpec` "liked vacancies should keep every status and reveal the enterprise only on matched ones" | Front: código (`pages/vacancies.ts`) |
+| CA40 | sim | `test/mapper/MatchMapperSpec` "candidate without match should have only anonymous data", "candidate response should never contain sensitive data, with or without match"; `MatchQueryServiceSpec` "candidate without match, even with a one-sided like, should not appear in the list" | Tela e atributos `aria-*`/`data-*`: T39 |
+| CA41 | sim | `MatchMapperSpec` "candidate with match should reveal name, email and only the matched vacancies", "…never contain sensitive data…"; `LikeControllerSpec` "reveal response should not carry sensitive fields" | — |
+| CA42 | sim | `MatchMapperSpec` "vacancy without match should not reveal the enterprise"; `LikeControllerSpec` "liked vacancy response should not carry the enterprise id or cnpj"; `MatchQueryServiceSpec` "vacancies without match should never read enterprise data" | Tela: T39 |
+| CA43 | parcial | — (front) | Front: código. `pages/vacancies.ts` não usa dados de recrutador. Falta a verificação no navegador (T39) |
+| CA44 | sim | `RecruiterMapperSpec` "response should not contain sensitive fields"; `RecruiterServletSpec` "the JSON body should not contain sensitive keys (CA44)"; `test/model/RecruiterSpec` "toString should not expose cpf, password or email" | — |
+| CA45 | parcial | — (front) | Front: código. As telas do recrutador não listam outros recrutadores. Falta a verificação no navegador (T39) |
+| CA46 | sim | `RecruiterServiceSpec` e `RecruiterControllerSpec` "listByEnterprise should return only the recruiters of the enterprise…(CA46)"; `RecruiterMapperSpec` "response should not contain sensitive fields" | Front: código (`RecruiterSummary`); `aria-*`/`data-*` em T39 |
+| CA47 | sim | Suíte completa (`./gradlew build`) | Passou sem PostgreSQL |
+| CA48 | sim | `npm run build` | Passou |
+| CA49 | sim | `git diff main -- Database/schema.sql Database/seed.sql Database/queries.sql` | Diff vazio |
+| CA50 | sim | — | `front/data/seed.ts` bate com o banco migrado: 5 recrutadores (mesmos dados e ordem da 003), 5 `candidate_like`, 4 `enterprise_like`, 4 `recruiter_like` (recrutadores 1, 2, 4, 5) e 3 matches. `DATA_FORMAT_VERSION` foi de `4` para `5` |
+| CA51 | parcial | — (front) | Front: código. `services/auth.ts` inclui `storage.recruiters` no login. Falta a verificação no navegador (T38) |
+| CA52 | sim | `MatchQueryServiceSpec` "liked vacancies should keep every status and reveal the enterprise only on matched ones"; `MatchMapperSpec` "vacancy without match should not reveal the enterprise"; `LikeControllerSpec` "liked vacancy response should not carry the enterprise id or cnpj" | Back sem `enterpriseId`; tela e atributos `aria-*`/`data-*`: T39 |
+
+Nenhum critério ficou com "não". Os "parcial" são: CA35, sem teste de integração com o banco (limitação conhecida), e
+CA18, CA36, CA43, CA45 e CA51, que são só de front, foram conferidos no código e esperam a verificação no navegador
+de T38/T39.
+
+**Casos de borda sem teste:** nenhum. B1–B19 aparecem nos nomes dos testes Spock. As partes que dependem do
+PostgreSQL (cascata do B12, `FOR UPDATE` contra corrida, rollback real do B16) não têm teste automático, porque o
+projeto não tem testes de integração (AGENTS.md 12).
+
+- [x] Concluída
 
 ### T38 — Regressão dos fluxos antigos
 - **Camada:** todas

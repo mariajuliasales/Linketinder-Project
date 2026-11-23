@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Conferência dos critérios de aceite do Recrutador (CA01–CA52) registrada em `docs/specs/recrutador/plano.md`, na
+  T37: tabela com critério, atendimento, teste que cobre e observação. Nenhum critério ficou com "não". CA35 é parcial
+  por falta de teste de integração com o banco; CA18, CA36, CA43, CA45 e CA51, só de front, esperam a verificação no
+  navegador de T38/T39. `reset+migrar` rodou duas vezes sem erro, os builds passaram e os scripts base não mudaram (#21).
+
 - Curtidas na tela de vagas do candidato no front (`pages/vacancies.ts`). A seção "Vagas abertas" mostra só vagas
   `OPEN`, com o botão curtir/descurtir. Logo abaixo, a seção "Minhas curtidas" lista as vagas curtidas em qualquer
   status (*Aberta*, *Pausada*, *Fechada*), com o botão de descurtir e, só na vaga com match, nome e e-mail da empresa.
