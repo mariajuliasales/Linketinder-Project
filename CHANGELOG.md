@@ -9,6 +9,10 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `MatchedVacancyResponse`, `CandidateMatchResponse`, `VacancyMatchResponse` e `MatchMapper`: respostas de revelação
+  montadas campo a campo. O candidato traz os dados anônimos e, só com match, nome, e-mail e as vagas da empresa com
+  match (id, título, status). A vaga traz os dados anônimos com status e, só com match, nome e e-mail da empresa, sem
+  `enterpriseId`. Nenhuma tem CPF, nascimento, idade, endereço, senha nem CNPJ (#21).
 - `RecruiterRequest`, `RecruiterResponse` e `RecruiterMapper`: o request traz nome, e-mail, senha, descrição, CPF,
   nascimento e área (convertida por `RecruitmentArea.fromName`; área inválida vira `null`); a resposta tem só `id`,
   nome, e-mail, área e descrição, sem CPF, nascimento, idade nem senha, inclusive no cadastro (#21).

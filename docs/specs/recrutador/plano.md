@@ -462,7 +462,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** testes de **ausência** antes e depois do match.
 - **Depende de:** T06
 - **Commit sugerido:** `feat(recrutador): add match reveal DTOs and mapper`
-- [ ] Concluída
+- [x] Concluída
 
 ### T18 — Controller do recrutador e rota `POST /api/recruiters`
 - **Camada:** back-end
