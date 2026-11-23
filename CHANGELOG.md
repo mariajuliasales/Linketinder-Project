@@ -9,6 +9,8 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `RecruiterValidator`: nome, e-mail, senha (opcional na atualização), CPF, data de nascimento (não futura, 18+)
+  e área da lista fixa, sem exigir endereço nem competências.
 - Modelo `Recruiter` (sem endereço nem competências, sem `toString` com dados pessoais) e enum `RecruitmentArea`
   com as 7 áreas e busca pelo nome sem diferenciar maiúsculas; valor `RECRUITER` em `PersonType`.
 - Migration `003_insert_example_recruiters.sql`: 5 recrutadores de exemplo (senha `123456`, sem endereço) e backfill

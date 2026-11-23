@@ -224,7 +224,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** as mensagens de erro não repetem o valor recebido (CPF, e-mail).
 - **Depende de:** T06
 - **Commit sugerido:** `feat(recrutador): validate recruiter fields`
-- [ ] Concluída
+- [x] Concluída
 
 ### T08 — Persistência do recrutador
 - **Camada:** back-end
