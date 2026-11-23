@@ -9,6 +9,10 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `RecruiterRepository` e `RecruiterDAO`: cadastro do recrutador (`person` sem endereço + `recruiter` na mesma
+  transação), busca por empresa, e-mail único entre todas as pessoas (sem diferenciar maiúsculas), atualização de
+  descrição e senha e remoção, sem nunca selecionar `password_hash`; `recruiter_cpf_key` traduzido para
+  "CPF já cadastrado".
 - `RecruiterValidator`: nome, e-mail, senha (opcional na atualização), CPF, data de nascimento (não futura, 18+)
   e área da lista fixa, sem exigir endereço nem competências.
 - Modelo `Recruiter` (sem endereço nem competências, sem `toString` com dados pessoais) e enum `RecruitmentArea`

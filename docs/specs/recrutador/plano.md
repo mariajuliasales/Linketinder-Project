@@ -243,7 +243,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   `enterprise_id`.
 - **Depende de:** T07
 - **Commit sugerido:** `feat(recrutador): add recruiter repository and JDBC DAO`
-- [ ] Concluída
+- [x] Concluída
 
 ### T09 — Serviço do recrutador: cadastro e edição
 - **Camada:** back-end
