@@ -9,6 +9,8 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Repositório de match (`MatchRepository`/`MatchDAO`) com as vagas curtidas da empresa e seus status (o filtro `OPEN`
+  fica no serviço), criação idempotente e remoção dos matches do candidato com a empresa (#21).
 - Repositório de curtidas (`LikeRepository`/`LikeDAO`) com trava da empresa e operações idempotentes (#21).
 - `RecruiterService`: cadastro do recrutador pela empresa (valida, confere a empresa e o e-mail entre todas as pessoas
   antes de gravar, sem comparar o CPF com o de candidatos) e edição da própria descrição e senha (senha vazia mantém a

@@ -289,12 +289,15 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T11 — Repositório de match
 - **Camada:** back-end
 - **O que será feito:** interface `MatchRepository` e `MatchDAO`, com métodos que recebem a `Connection`:
-  `openVacanciesOfEnterpriseLikedBy(candidateId, enterpriseId)`, `insertMatch` (`ON CONFLICT DO NOTHING`) e
+  `likedVacanciesOfEnterprise(candidateId, enterpriseId)` (id e status das vagas de E que C curtiu, em qualquer
+  status; o serviço filtra `OPEN`), `insertMatch` (`ON CONFLICT DO NOTHING`) e
   `deleteMatchesOfCandidateWithEnterprise`. Nenhuma regra fica no SQL.
 - **Arquivos envolvidos:** criar `main/repository/MatchRepository.groovy`, `main/dao/MatchDAO.groovy`
 - **Critérios de aceite cobertos:** base de CA22–CA35
 - **Como validar:** `./gradlew build` compila. Consulta rodada à mão no `psql` contra o banco de T04:
-  `openVacanciesOfEnterpriseLikedBy` para Sandubinha e Pastelsoft devolve só a vaga `OPEN`.
+  `likedVacanciesOfEnterprise` para Sandubinha e Pastelsoft devolve a vaga curtida com status `OPEN` (numa transação
+  desfeita: curtir também a vaga `CLOSED` da Pastelsoft e pausar a `OPEN` → a lista traz as duas, com os status
+  `CLOSED` e `PAUSED`).
 - **Anonimato:** os métodos devolvem só ids e status, nunca nome, e-mail, CPF ou CNPJ.
 - **Depende de:** T05
 - **Commit sugerido:** `feat(recrutador): add match repository`
@@ -331,7 +334,10 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Como validar:** `./gradlew test --tests '*RecruiterLikeServiceSpec'`, com um caso por B1, B2, B3, B7, B9, B10, B13,
   B14 e B16:
   - B9: CPF com e sem máscara, e `0 *` em todo `insert`;
-  - B14: `insertMatch` só com V2;
+  - B14: `insertMatch` só com V2. O filtro `OPEN` é do serviço, com o `likedVacanciesOfEnterprise` mockado:
+    - o mock devolve uma vaga `OPEN` → o match é criado;
+    - o mock devolve só vagas que não estão `OPEN` → nenhum match é criado;
+    - o mock devolve vagas `OPEN` e não `OPEN` misturadas → o match é criado só com a `OPEN`;
   - B16: o segundo `insertMatch` lança exceção. O teste monta o serviço com um `DatabaseConnection` de verdade sobre
     uma `Connection` `Mock()` e confere `0 * connection.commit()` e `1 * connection.rollback()`. Continua sendo teste
     com mock: o rollback **no PostgreSQL** não é testado, porque o projeto não tem testes de integração com o banco
