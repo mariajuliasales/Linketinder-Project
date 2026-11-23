@@ -168,6 +168,13 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Tela de candidatos da empresa no front (`pages/candidates.ts`): passa a usar `listCandidateCardsForEnterprise()`
+  (T28). Sem match, o candidato continua como "Candidato #N"; com match com a empresa, a linha mostra nome, e-mail e o
+  selo "Match". A tela não tem botão de curtir (CA36) e escolhe entre anônimo e revelado só por `candidate.reveal`
+  (CA38). O hover card e o gráfico de competências continuam sem dados pessoais, e a lista de vagas com match não é
+  exibida à empresa. O `id` do candidato não vai para o DOM (#21).
+- Plano do Recrutador: na T33, a junção das listas passa a ser feita no serviço (T28), e a lista de vagas com match
+  para a empresa fica registrada em "Fora do escopo" (#21).
 - Plano do Recrutador: na T28, `listCandidateCards(enterpriseId, recruiterId?)` vira `listCandidateCardsForRecruiter()`
   e `listCandidateCardsForEnterprise()`, que leem a sessão; a T30 passa a usar `listCandidateCardsForRecruiter()` (#21).
 - Plano do Recrutador: a T27 passa a incluir `data/storage.ts`, com `update(id, changes)` na `Collection`, que altera o

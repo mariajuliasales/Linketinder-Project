@@ -838,8 +838,10 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Camada:** front-end
 - **O que será feito:** `pages/candidates.ts` passa a usar `CandidateCard`: sem botão de curtir; nome e e-mail só com
   match com a empresa.
-- **Junção das listas:** a tela junta a listagem anônima com a lista de revelação, por id; candidato presente na
-  revelação substitui o anônimo.
+- **Junção das listas:** feita no serviço (T28); a tela só escolhe entre anônimo e revelado por `candidate.reveal`.
+- **Fora do escopo:** a lista das vagas de E com match não é exibida à empresa, porque o CA38 cobre só nome e e-mail.
+  A spec 2.4 ("Empresa E vendo C: a mesma regra do recrutador") a inclui; a decisão 4 (spec 8) a atribui só ao
+  recrutador. Pendente de decisão da desenvolvedora.
 - **Arquivos envolvidos:** alterar `front/pages/candidates.ts`
 - **Critérios de aceite cobertos:** CA36, CA38
 - **Como validar:** `npm run build`. Manual como `contato@techsolutions.com.br`: Lucas revelado, os demais anônimos; sem
@@ -848,7 +850,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** o gráfico e o hover card continuam sem dados pessoais.
 - **Depende de:** T28
 - **Commit sugerido:** `feat(recrutador): reveal matched candidates on enterprise candidates page`
-- [ ] Concluída
+- [x] Concluída
 
 ### T34 — Vagas do candidato: curtir e "Minhas curtidas"
 - **Camada:** front-end
