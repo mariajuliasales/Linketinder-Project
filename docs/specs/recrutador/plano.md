@@ -279,11 +279,12 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Arquivos envolvidos:** criar `main/repository/LikeRepository.groovy`, `main/dao/LikeDAO.groovy`
 - **Critérios de aceite cobertos:** base de CA22–CA35
 - **Como validar:** `./gradlew build` compila. As consultas são rodadas à mão no `psql` contra o banco de T04 (ex.:
-  `otherRecruiterOfEnterpriseLikes` para Juliana e Lucas devolve `false` antes de ela curtir Lucas).
+  `otherRecruiterOfEnterpriseLikes` devolve `true` para Juliana e Lucas, porque Rafael já curte Lucas, e `false` para
+  Rafael e Lucas antes de Juliana curtir Lucas).
 - **Anonimato:** os métodos devolvem só ids e `boolean`, nunca nome, e-mail, CPF ou CNPJ.
 - **Depende de:** T05
 - **Commit sugerido:** `feat(recrutador): add like repository`
-- [ ] Concluída
+- [x] Concluída
 
 ### T11 — Repositório de match
 - **Camada:** back-end
@@ -418,6 +419,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   `removeByEnterprise` e `listByEnterprise`, devolvendo só `RecruiterResponse`. `RecruiterServlet#doPost`: lê o JSON,
   exige `enterpriseId` inteiro, chama `create` e responde 201 com `Location` e `RecruiterResponse`. Os erros saem pelo
   `JsonResponse.sendError` (400/404/409). Registro em `Controllers`, `Application#createControllers` e `ApiMain`.
+  Registrar também `LikeDAO` e `MatchDAO` no `Application.groovy`.
 - **Arquivos envolvidos:** criar `main/controller/RecruiterController.groovy`,
   `test/controller/RecruiterControllerSpec.groovy`, `main/api/RecruiterServlet.groovy`,
   `test/api/RecruiterServletSpec.groovy`; alterar `main/controller/Controllers.groovy`, `main/Application.groovy`,
@@ -619,6 +621,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Como validar:** `npm run build`. Manual como TechSolutions:
   - vê só Rafael e Juliana;
   - cadastra um recrutador; e-mail repetido com maiúsculas e menor de 18 anos dão erro;
+  - como Juliana, curtir Lucas (no seed, só Rafael curte Lucas);
   - remove Rafael com Juliana ainda curtindo → o match de Lucas continua;
   - inspecionar o DOM: nenhum CPF ou nascimento em texto, `data-*` ou `aria-*`.
 - **Anonimato:** a tabela mostra só nome, e-mail, área e descrição; o `id` fica só no closure do botão de remover.
@@ -636,7 +639,8 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   - Lucas aparece revelado, com só "Full Stack" nas vagas com match;
   - Sandubinha (curtiu a Full Stack, sem match) aparece anônimo, sem indicar a curtida;
   - curtir Sandubinha → revela;
-  - descurtir com Rafael ainda curtindo → continua revelado.
+  - curtir Lucas (no seed, só Rafael curte Lucas);
+  - descurtir Lucas com Rafael ainda curtindo → continua revelado.
 
   Inspecionar o hover card e os atributos.
 - **Anonimato:** nada de quem mais curtiu, nem de outros recrutadores; antes do match, nenhum nome ou e-mail no DOM.
@@ -677,7 +681,8 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Arquivos envolvidos:** alterar `front/pages/candidates.ts`
 - **Critérios de aceite cobertos:** CA36, CA38
 - **Como validar:** `npm run build`. Manual como `contato@techsolutions.com.br`: Lucas revelado, os demais anônimos; sem
-  botão de curtir; depois que Rafael e Juliana descurtem Lucas, ele volta a "Candidato #N".
+  botão de curtir; como Juliana, curtir Lucas (no seed, só Rafael curte Lucas); depois que Rafael e Juliana descurtem
+  Lucas, ele volta a "Candidato #N".
 - **Anonimato:** o gráfico e o hover card continuam sem dados pessoais.
 - **Depende de:** T28
 - **Commit sugerido:** `feat(recrutador): reveal matched candidates on enterprise candidates page`
