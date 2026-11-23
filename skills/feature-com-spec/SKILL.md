@@ -119,10 +119,11 @@ A pessoa pede uma tarefa pelo número. Para cada tarefa:
 1. Lê de novo o `AGENTS.md`, a spec e o plano, porque eles podem ter mudado.
 2. Confere o estado do repositório (`git status`, último commit).
 3. Implementa **só** essa tarefa e altera **só** os arquivos listados nela.
-4. Roda a validação da tarefa e também a suíte completa de testes:
+4. Roda a validação da tarefa e também a suíte completa de testes do back-end:
    - `./gradlew test` (em `Linketinder/`) deve passar;
-   - os testes do front-end, quando existirem;
-   - `npm run build` (em `Frontend/`), se a tarefa tocar no front.
+   - se a tarefa tocar no front: `npm run build` (em `Frontend/`) deve passar e a verificação manual descrita na tarefa
+     deve ser feita. O front não tem testes automatizados (ver **AGENTS.md › Testes (front-end)**). Se o agente não
+     puder fazer a verificação manual, ele lista os passos e diz que ela não foi feita.
 
    Os comandos exatos estão em **AGENTS.md › Como executar e testar**.
 5. Adiciona uma entrada no `CHANGELOG.md`, na seção `[Não lançado]`, em **Adicionado**, **Modificado**, **Corrigido** ou **Removido**. A entrada é curta e diz o quê e por quê.
@@ -163,6 +164,7 @@ Depois disso, para e espera a revisão. Não começa a próxima tarefa.
 - [ ] Depois do match, só os dados permitidos no AGENTS.md são revelados
 - [ ] Há testes que verificam a AUSÊNCIA de dados sensíveis nas respostas
 - [ ] Logs e mensagens de erro não expõem dados pessoais
+- [ ] Front: verificação manual de que telas e tipos anônimos não mostram dados identificáveis antes do match (conferido no navegador e no localStorage)
 
 **Banco**
 - [ ] Mudança de schema em uma migration nova e idempotente em `Database/migrations/`
@@ -346,7 +348,7 @@ Todos os ⚠️ A CONFIRMAR desta spec. A spec só é aprovada quando esta lista
 - <onde rodar os comandos>
 - Nenhuma tarefa altera <pasta fora do escopo>.
 - Um commit por tarefa, no formato <padrão de commit>. Ao concluir a tarefa, marque `[x]` no título dela, no mesmo commit.
-- Ao final de cada tarefa, `./gradlew test` deve passar (e os testes do front, quando existirem).
+- Ao final de cada tarefa, `./gradlew test` deve passar. Tarefas que tocam no front também terminam com `npm run build` passando e com a verificação manual descrita na tarefa.
 - Toda tarefa adiciona uma entrada no `CHANGELOG.md`, em `[Não lançado]`.
 
 ## Antes de começar

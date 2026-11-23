@@ -35,7 +35,7 @@ A identidade só é revelada depois de um **match**. O objetivo é reduzir o vi�
 | Front-end | Vite | ^8.3.0 | `Frontend/package.json` |
 | Front-end | Bootstrap / Popper | ^5.3.8 / ^2.11.8 | `Frontend/package.json` |
 | Front-end | Node.js | 20.19+ ou 22.12+ | `README.md` |
-| Testes front-end | — | **nenhum** | `Frontend/package.json` |
+| Testes front-end | — | **nenhum** (ver seção 9.5) | decisão do projeto, 2026-11-23 |
 
 ---
 
@@ -399,13 +399,20 @@ Erros de SQL novos devem ser traduzidos no `SqlExceptionTranslator`, sem `catch`
   nunca com dados do usuário.
 - Telas protegidas usam `requireLoggedCandidate`/`requireLoggedEnterprise` (`pages/guards.ts`).
 
+### 9.5 Testes (front-end)
+- O front-end não tem testes automatizados, por decisão do projeto. A regra "toda regra nova precisa de testes" vale
+  para o back-end. Mudanças no front são validadas com `npm run build` e verificação manual.
+
+(fonte: decisão do projeto, 2026-11-23)
+
 ---
 
 ## 10. Restrições para agentes
 
 1. 🔒 **Não quebre o Princípio do Anonimato** (seção 8). Na dúvida, não exiba e pergunte.
 2. 🔒 **Não altere scripts SQL existentes.** Toda mudança de schema vira uma nova migration em `Database/migrations/`.
-3. **Toda regra nova precisa de testes.** No back-end, com Spock. No front, ver ⚠️ na seção 13.
+3. **Toda regra nova precisa de testes** no back-end, com Spock. O front é validado com `npm run build` e verificação
+   manual (seção 9.5).
 4. **Não adicione dependências sem justificar** (motivo, alternativa sem a dependência, versão exata) na spec ou no PR.
 5. **Faça mudanças pequenas e revisáveis:** uma preocupação por mudança, sem refatorar código não relacionado.
 6. Implemente features no banco + back-end **e** no front isolado (seção 4.5).
@@ -447,7 +454,6 @@ Problemas que já existem no código. Não os copie em código novo. Corrija-os 
 | Endereço da vaga | A vaga pode usar o endereço da sede, o que revela a cidade da empresa | `Database/seed.sql` (`CASE WHEN data.city IS NULL THEN p.address_id`) |
 | Idade mínima de 16 anos | Validada só no front; o back-end não valida | `docs/frontend.md`; ausente em `CandidateValidator` |
 | `EntityInUseException` | Não está mapeada e cai no 500 | `api/JsonResponse.groovy#sendError` |
-| Front sem testes | Não há ferramenta nem script `test` | `Frontend/package.json` |
 | Sem testes de integração com o banco | Todos os testes usam mocks; SQL e constraints não são testados automaticamente | `Linketinder/src/test/` |
 | `Vacancy.enterprise` com dados identificáveis | Carregado pelo DAO; vazaria se a entidade fosse serializada | `dao/VacancyDAO.groovy#enterpriseOf` |
 | Stack trace no log | Erros 500 chamam `printStackTrace` | `api/JsonResponse.groovy#sendError` |
@@ -456,7 +462,6 @@ Problemas que já existem no código. Não os copie em código novo. Corrija-os 
 
 ---
 
-## 13. ⚠️ Pontos a confirmar
+## 13. Pontos a confirmar
 
-- ⚠️ A CONFIRMAR: **testes de regras no front.** A regra "toda regra nova precisa de testes" exige uma ferramenta
-  (ex.: Vitest), o que seria uma dependência nova a justificar.
+Nenhum ponto em aberto no momento.
