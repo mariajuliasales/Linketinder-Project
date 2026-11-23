@@ -910,7 +910,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** as tabelas novas do AGENTS.md batem com a spec, seção 4.
 - **Depende de:** T35
 - **Commit sugerido:** `docs(recrutador): update AGENTS.md and API docs for recruiter feature`
-- [ ] Concluída
+- [x] Concluída
 
 ### T37 — Conferência dos critérios de aceite
 - **Camada:** todas

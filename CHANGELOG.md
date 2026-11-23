@@ -205,6 +205,12 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 - `AGENTS.md`: a seção 4.2 passa a documentar o reset oficial do banco (`dropdb` + `createdb` + `schema.sql` +
   `seed.sql` + migrations) e avisa que reaplicar só o `schema.sql` sobre um banco migrado não é suportado. A seção 10
   passa a apontar para a spec aprovada do Recrutador.
+- `AGENTS.md` atualizado para incluir o recrutador: ressalva sobre reaplicar o `schema.sql` (5.1), recrutador, área e
+  curtidas no domínio (6), estado atual de curtida e match (7), tabelas de anonimato do recrutador (8, com a nova 8.6),
+  skill e CHANGELOG já existentes (11) e limitações novas, incluindo a falta de autenticação na API (12). Também
+  `POST /api/recruiters` na lista de endpoints (4.5), recrutador sem endereço nas garantias do banco (5.3),
+  `requireLoggedRecruiter` (9.4) e o fim do aviso de que o arquivo descrevia o sistema sem o recrutador (10.8).
+  `docs/api.md` documenta o `POST /api/recruiters` (#21).
 
 ### Corrigido
 

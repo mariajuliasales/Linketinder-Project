@@ -140,7 +140,7 @@ isolado. Se mudar dados de exemplo no `seed.sql` ou numa migration, replique a m
 Ao mudar o formato dos dados do front, incremente `DATA_FORMAT_VERSION` em `storage.ts`
 (fonte: decisão do projeto, 2026-11-23; `Frontend/src/data/storage.ts#resetStorageIfOutdated`).
 
-API REST existente: só `POST /api/candidates`, `POST /api/enterprises` e `POST /api/vacancies`
+API REST existente: só `POST /api/candidates`, `POST /api/enterprises`, `POST /api/vacancies` e `POST /api/recruiters`
 (fonte: `Linketinder/src/main/groovy/com/mariajuliasales/ApiMain.groovy#main`). Detalhes em `docs/api.md`.
 
 ---
@@ -148,7 +148,8 @@ API REST existente: só `POST /api/candidates`, `POST /api/enterprises` e `POST 
 ## 5. Banco de dados
 
 ### 5.1 Scripts e ordem de aplicação
-1. `Database/schema.sql`: base. Começa com `DROP TABLE ... CASCADE`, então **reaplicá-lo apaga todos os dados**.
+1. `Database/schema.sql`: base. Começa com `DROP TABLE ... CASCADE`, então **reaplicá-lo apaga todos os dados**. Sobre
+   um banco que já recebeu migrations, não o reaplique sozinho: use o reset oficial da seção 4.2.
 2. `Database/seed.sql`: base, com os dados de exemplo.
 3. `Database/migrations/NNN_descricao.sql`: em ordem numérica crescente (`001_`, `002_`, …), depois do seed. Não há
    tabela de controle: todas as migrations são reaplicadas em ordem a cada execução do laço.
@@ -176,7 +177,7 @@ O comando exato está na seção 4.2.
 
 | Regra | Como |
 |---|---|
-| Uma pessoa é candidato **ou** empresa | FK composta `(person_id, person_type)` → `person(id, type)` + `CHECK` |
+| Uma pessoa é candidato **ou** empresa **ou** recrutador. O recrutador não tem endereço (`address_id` nulo só para `RECRUITER`) | FK composta `(person_id, person_type)` → `person(id, type)` + `CHECK`; `CHECK person_address_required_check` (`Database/migrations/002_create_recruiter.sql`) |
 | E-mail, CPF, CNPJ e nome da competência são únicos | `UNIQUE` |
 | Uma curtida por candidato/vaga e por empresa/candidato | PK composta |
 | Não existe match sem `candidate_like` | FK `vacancy_match_like_fkey` com `ON DELETE CASCADE` |
@@ -191,14 +192,16 @@ O comando exato está na seção 4.2.
 
 | Entidade | Tabela(s) | Atributos principais | Back-end | Front |
 |---|---|---|---|---|
-| Pessoa (base) | `person` | `id`, `type`, `name`, `email`, `description`, `password_hash`, `address_id`, `created_at` | `model/Person`, `AbstractPerson` | `Person` |
+| Pessoa (base) | `person` | `id`, `type` (`CANDIDATE`/`ENTERPRISE`/`RECRUITER`), `name`, `email`, `description`, `password_hash`, `address_id` (`NULL` só para `RECRUITER`), `created_at` | `model/Person`, `AbstractPerson`, `PersonType` | `Person`, `AccountBase` |
 | Candidato | `candidate` | `cpf`, `birth_date`, `training` (+ dados de `person`) | `model/Candidate` (`getAge` calculado) | `Candidate` |
 | Empresa | `enterprise` | `cnpj` (+ dados de `person`) | `model/Enterprise` (`vacancies`) | `Enterprise` |
+| Recrutador | `recruiter` | `enterprise_id`, `area_id`, `cpf` (único entre recrutadores), `birth_date` (+ `name`, `email`, `description`, `password_hash` de `person`; sem endereço e sem competências) | `model/Recruiter` | `Recruiter` |
+| Área de recrutamento | `recruitment_area` | `name` (lista fixa: TI, RH, Marketing, Segurança da Informação, Financeiro, Comercial, Operações) | `model/RecruitmentArea` | union fixa `RECRUITMENT_AREAS` |
 | Vaga | `vacancy` | `title`, `description`, `status` (`OPEN`/`PAUSED`/`CLOSED`, padrão `OPEN`), `address_id`, `enterprise_id` | `model/Vacancy` | `Vacancy` |
 | Competência | `competence` + 3 tabelas N:N | `name` (único, até 50 caracteres) | `model/Competence` (igualdade sem diferenciar maiúsculas) | union fixa `COMPETENCES` |
 | Endereço | `address` | `cep`, `street`, `number`, `complement`, `neighborhood`, `city`, `state`, `country` | `model/Address` | `Address` (cep, cidade, UF, país) |
-| Curtida | `candidate_like`, `enterprise_like` | `candidate_id` + `vacancy_id` / `enterprise_id` + `candidate_id`, `created_at` | **não existe** | **não existe** |
-| Match | `vacancy_match` | `candidate_id`, `vacancy_id`, `matched_at` | **não existe** | **não existe** |
+| Curtida | `candidate_like`, `recruiter_like`, `enterprise_like` | `candidate_id` + `vacancy_id` / `recruiter_id` + `candidate_id` / `enterprise_id` + `candidate_id` (curtida consolidada, mantida pelo serviço), `created_at` | `repository/LikeRepository`, `dao/LikeDAO`, `service/CandidateLikeService`, `service/RecruiterLikeService` | `CandidateLike`, `RecruiterLike`, `EnterpriseLike`; `services/likes.ts` |
+| Match | `vacancy_match` | `candidate_id`, `vacancy_id`, `matched_at` | `repository/MatchRepository`, `dao/MatchDAO`, `service/MatchQueryService` | `Match`; `services/likes.ts` |
 
 ### 6.1 Relacionamentos
 
@@ -206,7 +209,10 @@ O comando exato está na seção 4.2.
 erDiagram
     PERSON ||--o| CANDIDATE : "é"
     PERSON ||--o| ENTERPRISE : "é"
-    PERSON }o--|| ADDRESS : "mora em"
+    PERSON ||--o| RECRUITER : "é"
+    PERSON }o--o| ADDRESS : "mora em (opcional só p/ RECRUITER)"
+    ENTERPRISE ||--o{ RECRUITER : "emprega"
+    RECRUITMENT_AREA ||--o{ RECRUITER : "atua em"
     ENTERPRISE ||--o{ VACANCY : "publica"
     VACANCY }o--|| ADDRESS : "fica em"
     CANDIDATE }o--o{ COMPETENCE : "candidate_competence"
@@ -214,37 +220,53 @@ erDiagram
     VACANCY }o--o{ COMPETENCE : "vacancy_competence"
     CANDIDATE ||--o{ CANDIDATE_LIKE : "curte vaga"
     VACANCY ||--o{ CANDIDATE_LIKE : "é curtida"
-    ENTERPRISE ||--o{ ENTERPRISE_LIKE : "curte candidato"
+    RECRUITER ||--o{ RECRUITER_LIKE : "curte candidato"
+    CANDIDATE ||--o{ RECRUITER_LIKE : "é curtido"
+    ENTERPRISE ||--o{ ENTERPRISE_LIKE : "curtida consolidada"
     CANDIDATE ||--o{ ENTERPRISE_LIKE : "é curtido"
     CANDIDATE_LIKE ||--o| VACANCY_MATCH : "origina"
 ```
 
-- `person` 1:1 `candidate` **ou** `enterprise`.
+- `person` 1:1 `candidate` **ou** `enterprise` **ou** `recruiter`.
 - `enterprise` 1:N `vacancy`.
+- `enterprise` 1:N `recruiter`. Todo recrutador tem exatamente uma empresa (vínculo fixo).
+- `recruitment_area` 1:N `recruiter`. Todo recrutador tem exatamente uma área.
 - `candidate`, `enterprise` e `vacancy` N:N `competence`.
 - `candidate` N:N `vacancy` via `candidate_like`.
+- `recruiter` N:N `candidate` via `recruiter_like`.
 - `enterprise` N:N `candidate` via `enterprise_like`.
+- `enterprise_like(E, C)` ⇔ existe `recruiter_like(R, C)` com `R.enterprise_id = E`. **Garantido pelo serviço, não pelo
+  banco** (seção 7.2).
 - `vacancy_match` é 0..1 por `candidate_like`, e único por (candidato, vaga).
 
-(fonte: `Database/schema.sql`, `Database/linketinder.dbml`)
+(fonte: `Database/schema.sql`, `Database/migrations/002_create_recruiter.sql`, `Database/linketinder.dbml`;
+`docs/specs/recrutador/spec.md` › 3)
 
 ---
 
 ## 7. Regras de negócio centrais
 
-> **Estado atual:** curtida e match **existem só no banco** (tabelas, seed e `queries.sql`). Não há código no back-end
-> (model, service, DAO, API) nem no front-end. A home do front mostra "Dê match – em breve"
-> (fonte: `Frontend/src/pages/home.ts#STEPS`).
+> **Estado atual:** curtida e match existem no banco, no back-end (service, controller e DAO, com testes Spock) e no
+> front isolado. **Não há rota na API** para curtidas e matches: elas ficam em `controller/LikeController` (fonte:
+> `docs/specs/recrutador/spec.md` › 6.4). As regras detalhadas e os casos de borda (B1–B19) estão na spec, seção 2.
 
 ### 7.1 Quem curte quem
-- **Candidato → vaga:** o candidato curte uma vaga (fonte: `Database/schema.sql#candidate_like`).
-  - Só pode curtir vagas com status `OPEN`. O serviço valida isso.
+- **Candidato → vaga:** o candidato curte uma vaga (fonte: `service/CandidateLikeService.groovy#like`).
+  - Só pode curtir vagas com status `OPEN`; senão, 400 "Só é possível curtir vagas abertas".
   - Curtidas existentes continuam valendo se a vaga for pausada (`PAUSED`) ou fechada (`CLOSED`).
-- **Empresa → candidato:** a empresa curte um candidato, não uma vaga (fonte: `Database/schema.sql#enterprise_like`).
-  - Pode curtir **qualquer** candidato, mesmo que ele não tenha curtido nenhuma vaga dela.
-- Uma curtida por par (PK composta).
+  - Pode descurtir em qualquer status. A seção "Minhas curtidas" mostra as vagas curtidas em qualquer status.
+- **Recrutador → candidato:** só **recrutadores** curtem candidatos. A conta da empresa vê a lista anônima de candidatos,
+  sem botão de curtir (fonte: `service/RecruiterLikeService.groovy#like`).
+  - Pode curtir **qualquer** candidato, mesmo que ele não tenha curtido nenhuma vaga da empresa. A área do recrutador
+    não limita nada.
+  - Não pode curtir o candidato com o mesmo CPF que o dele: 400 "Você não pode curtir o seu próprio perfil de
+    candidato.".
+- **`enterprise_like` é a curtida consolidada da empresa**, mantida só pelo serviço:
+  `enterprise_like(E, C)` existe **se e somente se** algum recrutador de E curte C. 🔒 O banco não garante essa
+  invariante (sem FK nem trigger).
+- Uma curtida por par (PK composta). Curtir de novo ou descurtir o que não foi curtido é idempotente, sem erro.
 
-(fonte: decisão do projeto, 2026-11-23)
+(fonte: decisão do projeto, 2026-11-23; `docs/specs/recrutador/spec.md` › 2.2, 2.3)
 
 ### 7.2 Quando o match acontece
 - Só existe match para (candidato C, vaga V) quando há **as duas** curtidas: `candidate_like(C, V)` **e**
@@ -254,17 +276,31 @@ erDiagram
   (fonte: decisão do projeto, 2026-11-23).
 - O banco garante só o `candidate_like` (FK). **Ele não garante o `enterprise_like`.** O serviço precisa verificar
   essa curtida e ter testes que cubram isso.
-- Uma curtida da empresa num candidato completa o match com **todas** as vagas dessa empresa que o candidato curtiu.
+- A **primeira** curtida de um recrutador de E em C grava, na mesma transação, a `recruiter_like`, o `enterprise_like(E,
+  C)` e o match com **todas** as vagas de E que C curtiu **e que estão `OPEN`**. Curtidas de outros recrutadores de E
+  em C só gravam a `recruiter_like`.
+- **Match novo só com vaga `OPEN`.** Matches existentes continuam se a vaga mudar de status. Mudar o status não cria nem
+  apaga matches: se a vaga voltar a `OPEN`, o match só nasce numa nova curtida que complete o par.
 - **O match só existe enquanto as duas curtidas existirem.** Remover qualquer uma delas remove o match:
   - remover o `candidate_like(C, V)` apaga o match em cascata, pelo banco
     (fonte: `Database/schema.sql#vacancy_match_like_fkey`);
-  - remover o `enterprise_like(E, C)` **não** dispara nada no banco. O serviço apaga, na mesma transação, os matches
-    de C com **todas** as vagas de E (fonte: decisão do projeto, 2026-11-23).
+  - quando o **último** recrutador de E descurte C (ou é removido pela empresa), o serviço apaga, na mesma transação, o
+    `enterprise_like(E, C)` e os matches de C com **todas** as vagas de E
+    (fonte: `service/RecruiterLikeService.groovy#releaseRecruiterLike`).
+- O serviço bloqueia a linha da empresa (`SELECT ... FOR UPDATE`) no início da curtida/descurtida do recrutador, para
+  evitar corrida entre recrutadores (fonte: `dao/LikeDAO.groovy#LOCK_ENTERPRISE`).
+
+(fonte: decisão do projeto, 2026-11-23; `docs/specs/recrutador/spec.md` › 2.3)
 
 ### 7.3 O que muda depois do match
 - Para o par (candidato, vaga) com match, passam a ser visíveis: **nome e e-mail dos dois lados** e o **nome da empresa
   dona da vaga** (fonte: decisão do projeto, 2026-11-23).
-- Os outros dados seguem a tabela da seção 8.
+- A empresa E e seus recrutadores veem C revelado quando há ao menos um match de C com uma vaga de E. Junto vem a lista
+  **só** das vagas de E com match (id, título, status).
+- O candidato vê nome e e-mail da empresa **só na vaga com match**. Nenhum dado de recrutador é exibido a ele.
+- Quando o match deixa de existir, os dados voltam a ficar ocultos na hora.
+- Os outros dados seguem a tabela da seção 8 (fonte: `docs/specs/recrutador/spec.md` › 2.4;
+  `service/MatchQueryService.groovy`).
 
 ### 7.4 Validações existentes
 
@@ -279,6 +315,8 @@ erDiagram
 | Competência sem repetição (sem diferenciar maiúsculas) | `service/CompetenceService.groovy#checkBusinessRules` |
 | Candidato vê só vagas `OPEN` (front) | `Frontend/src/services/vacancies.ts#listOpenVacancies` |
 | Empresa só exclui as próprias vagas (front) | `Frontend/src/services/vacancies.ts#deleteOwnVacancy` |
+| Recrutador: nome, e-mail válido e único entre **todas** as pessoas sem diferenciar maiúsculas (409 "E-mail já cadastrado"), senha 6+ (obrigatória no cadastro), CPF válido e único entre recrutadores (409 "CPF já cadastrado"), nascimento obrigatório, não futuro e 18+, área da lista fixa ("Área de recrutamento inválida") | `service/validator/RecruiterValidator.groovy`, `service/RecruiterService.groovy#create`, `dao/SqlExceptionTranslator.groovy` (`recruiter_cpf_key`) |
+| Só a empresa cadastra, lista e remove os próprios recrutadores; recrutador de outra empresa → 404 genérico. O recrutador edita só a própria descrição e senha | `service/RecruiterService.groovy#removeByEnterprise`, `#updateOwnProfile` |
 
 ---
 
@@ -289,7 +327,9 @@ erDiagram
 
 (fonte: decisão do projeto, 2026-11-23; `README.md`; `docs/database.md`)
 
-### 8.1 Candidato (visto pela empresa)
+### 8.1 Candidato (visto pela empresa ou pelo recrutador)
+
+"Match" = existe `vacancy_match` entre o candidato e alguma vaga da empresa (a própria, ou a do recrutador).
 
 | Dado | Antes do match | Depois do match |
 |---|---|---|
@@ -298,6 +338,9 @@ erDiagram
 | Competências | ✅ | ✅ |
 | Nome | ❌ | ✅ |
 | E-mail | ❌ | ✅ |
+| Vagas da empresa que deram match | ❌ | ✅ só as com match (id, título, status) |
+| Vagas que o candidato curtiu sem match / se curtiu alguma vaga da empresa | ❌ | ❌ (só as com match) |
+| Quais outros recrutadores curtiram o candidato | ❌ | ❌ |
 | CPF | ❌ | ❌ nunca |
 | Data de nascimento | ❌ | ❌ nunca |
 | Idade (calculada por `Candidate#getAge`) | ❌ | ❌ nunca |
@@ -305,9 +348,13 @@ erDiagram
 | Senha / hash | ❌ | ❌ nunca |
 | `id` interno | só na API, nunca na tela como identificador | só na API |
 
-### 8.2 Empresa e vaga (vistas pelo candidato)
+(fonte: `docs/specs/recrutador/spec.md` › 4.1; `dto/response/CandidateMatchResponse`, `Frontend/src/types.ts#CandidateCard`)
 
-O candidato **não vê perfil de empresa**, nem anônimo. Ele vê só **vagas anônimas**.
+### 8.2 Empresa, vaga e recrutador (vistos pelo candidato)
+
+O candidato **não vê perfil de empresa**, nem anônimo. Ele vê só **vagas anônimas**. **Nenhum dado de recrutador**
+(nome, e-mail, área, descrição, CPF, nascimento, nem a existência) é exibido ao candidato, nem depois do match. Ele
+também não vê se foi curtido nem por quem: só vê que houve match na vaga.
 
 | Dado | Antes do match | Depois do match |
 |---|---|---|
@@ -316,19 +363,25 @@ O candidato **não vê perfil de empresa**, nem anônimo. Ele vê só **vagas an
 | Cidade/UF da vaga | ✅ | ✅ |
 | Status da vaga | ✅ | ✅ |
 | Competências da vaga | ✅ | ✅ |
+| Vagas que o próprio candidato curtiu, em qualquer status ("Minhas curtidas") | ✅ só os dados anônimos e o status | ✅ e, só na vaga com match, nome e e-mail da empresa |
 | Qualquer vínculo vaga → empresa (`enterpriseId`, nome, e-mail, CNPJ) | ❌ | só nome e e-mail |
-| Nome da empresa | ❌ | ✅ |
-| E-mail da empresa | ❌ | ✅ |
+| Nome da empresa | ❌ | ✅ só na vaga com match |
+| E-mail da empresa | ❌ | ✅ só na vaga com match |
 | Perfil da empresa (descrição, competências, UF, país, nº de vagas) | ❌ | ❌ |
 | CNPJ | ❌ | ❌ nunca |
 | Endereço completo da empresa | ❌ | ❌ nunca |
 | Senha / hash | ❌ | ❌ nunca |
 | `id` interno | só na API, nunca na tela como identificador | só na API |
 
-### 8.3 Nunca exibidos a outro usuário (nem depois do match)
-Senha (e hash), CPF, CNPJ, data de nascimento, idade calculada e endereço completo.
+(fonte: `docs/specs/recrutador/spec.md` › 4.2; `dto/response/VacancyMatchResponse`,
+`Frontend/src/types.ts#LikedVacancyCard`)
 
-(fonte: decisão do projeto, 2026-11-23)
+### 8.3 Nunca exibidos a outro usuário (nem depois do match)
+Senha (e hash), CPF, CNPJ, data de nascimento, idade calculada e endereço completo. Vale também para o recrutador
+(que não tem endereço): CPF, nascimento, idade e senha não aparecem para ninguém, nem para a própria empresa, nem na
+resposta do cadastro.
+
+(fonte: decisão do projeto, 2026-11-23; `docs/specs/recrutador/spec.md` › 4.5)
 
 ### 8.4 Regras de implementação
 - Listagens e respostas para terceiros usam **sempre** DTOs `*AnonymousResponse`, montados **campo a campo** no mapper
@@ -341,8 +394,15 @@ Senha (e hash), CPF, CNPJ, data de nascimento, idade calculada e endereço compl
 - No front, a mesma regra vale com os tipos `CandidateAnonymous` e `VacancyAnonymous`, montados por desestruturação
   (fonte: `Frontend/src/services/candidates.ts#listAnonymousCandidates`, `services/vacancies.ts#toAnonymousVacancy`).
   Na tela, o candidato aparece como "Candidato #N", pela posição na lista (fonte: `pages/candidates.ts#candidateLabel`).
+- Visões que dependem do match usam `CandidateMatchResponse` (com `MatchedVacancyResponse`) e `VacancyMatchResponse`,
+  montados campo a campo no `MatchMapper`: os campos revelados ficam `null` sem match, e `VacancyMatchResponse` não tem
+  `enterpriseId` (fonte: `mapper/MatchMapper.groovy`). No front, os tipos equivalentes são `CandidateCard` (`reveal`) e
+  `LikedVacancyCard` (`enterprise`).
 - **Respostas de cadastro** podem devolver os dados do próprio usuário, **nunca a senha**
   (fonte: decisão do projeto, 2026-11-23; `CandidateMapper#toResponse`, `EnterpriseMapper#toResponse`).
+  **Exceção:** quem cadastra o recrutador é a empresa, então o `RecruiterResponse` traz só `id`, nome, e-mail, área e
+  descrição, sem CPF, nascimento, idade e senha (fonte: `mapper/RecruiterMapper.groovy`; spec › 4.3). No front, a
+  empresa recebe só `RecruiterSummary`.
 - Um DTO novo para terceiros precisa de teste no `*MapperSpec` que confirme a ausência dos campos proibidos.
 
 ### 8.5 Onde o anonimato costuma vazar (checar sempre)
@@ -352,9 +412,34 @@ Senha (e hash), CPF, CNPJ, data de nascimento, idade calculada e endereço compl
 | Consultas SQL com JOIN | JOIN com `person`/`enterprise` traz nome, e-mail, CNPJ e CPF para a memória. Selecione só as colunas necessárias |
 | Serialização de objetos inteiros | `JsonResponse.send` serializa qualquer objeto. Passe só DTOs anônimos, nunca entidades nem `Map` montado a partir delas |
 | `toString` / logs | `printStackTrace` em `JsonResponse#sendError`; `AbstractPerson.password` em memória; nada de `println` de entidades |
-| Respostas da API | Toda rota de listagem ou leitura para terceiros devolve `*AnonymousResponse` |
-| Front-end | `pages/` deve receber só os tipos `*Anonymous`. Atenção aos hover cards (`ui/hoverCard.ts`) e aos atributos `aria-*`/`data-*` |
-| Mensagens de erro | Não confirme a existência de e-mail, CPF ou CNPJ de terceiros além do que já existe (409 no cadastro) |
+| Respostas da API | Toda rota de listagem ou leitura para terceiros devolve `*AnonymousResponse` (ou `*MatchResponse`, seção 8.4). O `POST /api/recruiters` devolve só `RecruiterResponse` |
+| Front-end | `pages/` deve receber só os tipos `*Anonymous`, os revelados (`CandidateCard`, `LikedVacancyCard`) ou `RecruiterSummary`, montados nos `services/`. Atenção aos hover cards (`ui/hoverCard.ts`) e aos atributos `aria-*`/`data-*` |
+| Mensagens de erro | Não confirme a existência de e-mail, CPF ou CNPJ de terceiros além do que já existe (409 no cadastro; o 409 de e-mail no cadastro de recrutador é limitação aceita, seção 12). Nas telas, troque os 404 por mensagem genérica, sem o id interno |
+
+### 8.6 Recrutador
+
+**Empresa vendo os próprios recrutadores** (visibilidade fixa, sem "antes/depois do match"):
+
+| Dado do recrutador | Visível para a própria empresa |
+|---|---|
+| Nome, e-mail, área, descrição | ✅ (`RecruiterResponse` / `RecruiterSummary`) |
+| Candidatos curtidos por cada recrutador | ❌ |
+| CPF, data de nascimento, idade, senha/hash | ❌ nunca, nem na resposta do cadastro |
+| Recrutadores de **outra** empresa | ❌ (404 genérico em ids de outra empresa) |
+
+**Recrutador vendo outros recrutadores:**
+
+| Dado | Mesma empresa | Outra empresa |
+|---|---|---|
+| Existência, nome, e-mail, área, descrição | ❌ | ❌ |
+| Curtidas de outros recrutadores | ❌ | ❌ |
+| CPF, nascimento, idade, senha/hash | ❌ nunca | ❌ nunca |
+
+O recrutador vê a própria empresa só como contexto (o nome dela na tela dele) e as vagas dela em modo somente leitura,
+em todos os status (`VacancyAnonymousResponse`). Não vê o CNPJ nem vagas de outras empresas. Ele vê candidatos como a
+empresa (seção 8.1).
+
+(fonte: `docs/specs/recrutador/spec.md` › 4.3, 4.4)
 
 ---
 
@@ -404,7 +489,7 @@ Erros de SQL novos devem ser traduzidos no `SqlExceptionTranslator`, sem `catch`
 - `types.ts` concentra os tipos. `services/` tem a lógica sem DOM. `pages/` monta as telas. `ui/` tem os componentes.
 - O DOM é criado com `createElement`/`elementFromTemplate` (`ui/dom.ts`). Use `innerHTML` só com conteúdo fixo,
   nunca com dados do usuário.
-- Telas protegidas usam `requireLoggedCandidate`/`requireLoggedEnterprise` (`pages/guards.ts`).
+- Telas protegidas usam `requireLoggedCandidate`/`requireLoggedEnterprise`/`requireLoggedRecruiter` (`pages/guards.ts`).
 
 ### 9.5 Testes (front-end)
 - O front-end não tem testes automatizados, por decisão do projeto. A regra "toda regra nova precisa de testes" vale
@@ -425,8 +510,7 @@ Erros de SQL novos devem ser traduzidos no `SqlExceptionTranslator`, sem `catch`
 6. Implemente features no banco + back-end **e** no front isolado (seção 4.5).
 7. Não estenda os menus do console com dados identificáveis (seção 12).
 8. A feature **Recrutador** segue a spec aprovada `docs/specs/recrutador/spec.md` e o plano
-   `docs/specs/recrutador/plano.md`. As regras do recrutador vêm de lá, não deste arquivo, que ainda descreve o sistema
-   sem ele.
+   `docs/specs/recrutador/plano.md`. As regras do recrutador vêm de lá.
 9. `./gradlew build` e `npm run build` devem passar ao fim de cada tarefa.
 
 ---
@@ -446,8 +530,8 @@ Erros de SQL novos devem ser traduzidos no `SqlExceptionTranslator`, sem `catch`
     O agente deixa este item aberto e o sinaliza;
   - [ ] seed do front (`Frontend/src/data/seed.ts`) alinhado, se os dados de exemplo mudaram;
   - [ ] `CHANGELOG.md` atualizado em `[Não lançado]`.
-- A skill, a pasta `docs/specs/` e o `CHANGELOG.md` **ainda não existem** e serão criados nas próximas etapas. Se não estiverem no repositório,
-  pergunte antes de inventar o formato.
+- A skill (`skills/feature-com-spec/SKILL.md`), a pasta `docs/specs/` (com `docs/specs/recrutador/`) e o
+  `CHANGELOG.md` já existem. Siga o formato deles; não invente outro.
 
 ---
 
@@ -458,8 +542,8 @@ Problemas que já existem no código. Não os copie em código novo. Corrija-os 
 | Item | Situação | Fonte |
 |---|---|---|
 | Menus do console | Uso **administrativo**, sem login: "Ver perfil completo" e "Ver dados completos" mostram CPF, CNPJ, idade, e-mail e endereço; as listagens exibem o `id`; "Listar empresas" usa o `EnterpriseAnonymousResponse` (perfil de empresa, que candidatos não podem ver). **Não estenda.** | `view/CandidateMenu.groovy#showCandidate`, `view/EnterpriseMenu.groovy#showEnterprise`, `view/ResponseFormatter.groovy` |
-| Senha em texto puro no front | Gravada no `localStorage` e comparada em texto no login | `Frontend/src/services/auth.ts#login`, `Frontend/src/types.ts#Person` |
-| Descrição livre | Pode identificar a pessoa ou empresa (ex.: seed "Pastelsoft… restaurantes") | `Database/seed.sql` |
+| Senha em texto puro no front | Gravada no `localStorage` e comparada em texto no login. O recrutador herda a limitação | `Frontend/src/services/auth.ts#login`, `Frontend/src/types.ts#Person`, `#Recruiter` |
+| Descrição livre | Pode identificar a pessoa ou empresa (ex.: seed "Pastelsoft… restaurantes"). A do recrutador também, mas só a própria empresa a vê | `Database/seed.sql` |
 | Endereço da vaga | A vaga pode usar o endereço da sede, o que revela a cidade da empresa | `Database/seed.sql` (`CASE WHEN data.city IS NULL THEN p.address_id`) |
 | Idade mínima de 16 anos | Validada só no front; o back-end não valida | `docs/frontend.md`; ausente em `CandidateValidator` |
 | `EntityInUseException` | Não está mapeada e cai no 500 | `api/JsonResponse.groovy#sendError` |
@@ -467,7 +551,15 @@ Problemas que já existem no código. Não os copie em código novo. Corrija-os 
 | `Vacancy.enterprise` com dados identificáveis | Carregado pelo DAO; vazaria se a entidade fosse serializada | `dao/VacancyDAO.groovy#enterpriseOf` |
 | Stack trace no log | Erros 500 chamam `printStackTrace` | `api/JsonResponse.groovy#sendError` |
 | Front isolado | Não conversa com a API; seed duplicado | `Frontend/src/data/storage.ts`, `Frontend/src/data/seed.ts` |
-| Curtida e match | Existem só no banco | seção 7 |
+| `localStorage` com todos os dados | O front guarda dados completos de todos no navegador. O anonimato do front é garantido só nas telas e nos tipos passados a `pages/` | `Frontend/src/data/storage.ts` |
+| Curtida e match sem rota na API | Existem no service, no controller e no front, mas não há endpoint | `controller/LikeController.groovy`; spec › 6.4 |
+| API e controllers sem autenticação | O `POST /api/recruiters` confia no `enterpriseId` do corpo: qualquer cliente cadastra recrutador para qualquer empresa (como o `POST /api/vacancies`). Os controllers que recebem `recruiterId`/`candidateId`/`enterpriseId` (curtidas, visão de candidatos, "Minhas curtidas", vagas da empresa para o recrutador, gestão de recrutadores) confiam no id informado | `api/RecruiterServlet.groovy#doPost`, `controller/LikeController.groovy`, `controller/RecruiterController.groovy` |
+| Enumeração de e-mail pelo cadastro de recrutador | O 409 "E-mail já cadastrado" revela se um e-mail já existe como candidato, empresa ou recrutador. **Limitação aceita:** e-mail único só entre recrutadores quebraria o login por e-mail | `service/RecruiterService.groovy#create`; spec › 4.6 |
+| Invariante `enterprise_like` ⇔ `recruiter_like` | O banco não garante. Um `DELETE` manual em `recruiter`/`person` pula a recontagem e pode deixar `enterprise_like` (e matches) sem recrutador | `service/RecruiterLikeService.groovy`; spec › 2.3 |
+| Concorrência nas curtidas do recrutador | Protegida com `SELECT ... FOR UPDATE` na empresa, mas sem teste automático (não há testes de integração) | `dao/LikeDAO.groovy#LOCK_ENTERPRISE` |
+| Reset do banco | Só é suportado com `dropdb` + `createdb` (seção 4.2). Reaplicar só o `schema.sql` sobre um banco migrado deixa `recruiter` inconsistente | spec › 3.3 |
+| Recrutadores de exemplo | Se um recrutador de exemplo for removido, reaplicar a 003 o recria (com backfill só de curtidas órfãs) | `Database/migrations/003_insert_example_recruiters.sql` |
+| E-mail único diferencia maiúsculas | O `UNIQUE` de `person.email` diferencia maiúsculas. Corrigido só no serviço do recrutador; candidato e empresa continuam com o bug | `service/RecruiterService.groovy#create`; spec › 2.1 |
 
 ---
 
