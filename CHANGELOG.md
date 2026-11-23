@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Login e guard do recrutador no front: recrutadores entram em `allAccounts` (login por e-mail sem diferenciar
+  maiúsculas e levado a `#/recruiter-candidates`), com `getLoggedRecruiter` no `auth.ts` e `requireLoggedRecruiter` no
+  `guards.ts`. O guard de empresa barra o recrutador (ex.: `#/my-vacancies` redireciona para o login). E-mails de
+  recrutadores passam a contar em `isEmailInUse`. `deleteLoggedAccount` lança erro para a conta de recrutador, sem
+  deslogar, porque quem o remove é a empresa (#21).
 - Armazenamento e seed do front para o recrutador: coleções `recruiters`, `candidateLikes`, `recruiterLikes`,
   `enterpriseLikes` e `matches` no `storage.ts`, com `DATA_FORMAT_VERSION` = `5` (dados antigos no navegador são
   recriados). O `seed.ts` copia os 5 recrutadores da migration 003 (`recruiter-1`…`recruiter-5`, senha `123456`), as 5

@@ -1,9 +1,9 @@
 import * as storage from '../data/storage';
 import { listOwnVacancies } from './vacancies';
-import type { Account, Candidate, Enterprise } from '../types';
+import type { Account, Candidate, Enterprise, Recruiter } from '../types';
 
 function allAccounts(): Account[] {
-  return [...storage.candidates.getAll(), ...storage.enterprises.getAll()];
+  return [...storage.candidates.getAll(), ...storage.enterprises.getAll(), ...storage.recruiters.getAll()];
 }
 
 function isSameEmail(first: string, second: string): boolean {
@@ -63,8 +63,18 @@ export function getLoggedEnterprise(): Enterprise | undefined {
   return account?.type === 'ENTERPRISE' ? account : undefined;
 }
 
+export function getLoggedRecruiter(): Recruiter | undefined {
+  const account = getLoggedAccount();
+  return account?.type === 'RECRUITER' ? account : undefined;
+}
+
 export function deleteLoggedAccount(): void {
   const account = getLoggedAccount();
+  // O recrutador não exclui a própria conta: quem o remove é a empresa (T27). A cascata das exclusões
+  // (recrutadores, curtidas e matches) fica na T25.
+  if (account?.type === 'RECRUITER') {
+    throw new Error('Recrutador não pode excluir a própria conta.');
+  }
   if (account?.type === 'CANDIDATE') {
     storage.candidates.remove(account.id);
   }

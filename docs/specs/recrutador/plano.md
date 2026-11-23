@@ -664,7 +664,8 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T24 — Login e guard do recrutador
 - **Camada:** front-end
 - **O que será feito:** em `auth.ts`, recrutadores entram em `allAccounts` (login por e-mail sem diferenciar
-  maiúsculas) e ganham `getLoggedRecruiter`. Em `guards.ts`, `requireLoggedRecruiter`.
+  maiúsculas) e ganham `getLoggedRecruiter`. Em `guards.ts`, `requireLoggedRecruiter`. `deleteLoggedAccount` recusa
+  explicitamente a conta de recrutador (lança erro, sem deslogar), porque ele não exclui a própria conta.
 - **Arquivos envolvidos:** alterar `front/services/auth.ts`, `front/pages/guards.ts`
 - **Critérios de aceite cobertos:** CA51, CA20 (guard de empresa barra recrutador)
 - **Como validar:** `npm run build`. Manual: login com `rafael.lopes@techsolutions.com.br` / `123456` cai na home do
@@ -672,14 +673,16 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** não se aplica (sem tela nova).
 - **Depende de:** T23
 - **Commit sugerido:** `feat(recrutador): support recruiter login and guard in frontend`
-- [ ] Concluída
+- [x] Concluída
 
 ### T25 — Exclusão de contas em cascata no front
 - **Camada:** front-end
 - **O que será feito:** em `auth.ts#deleteLoggedAccount`, espelhando o `ON DELETE CASCADE` do banco:
   - a empresa apaga também os recrutadores dela, as curtidas desses recrutadores, os `enterpriseLikes` dela, as
-    curtidas em vagas dela e os matches dessas vagas;
-  - o candidato apaga também as curtidas que fez, as `recruiterLikes`/`enterpriseLikes` que recebeu e os matches dele.
+    curtidas em vagas dela e os matches dessas vagas. Isso inclui os matches que vieram das curtidas dos recrutadores,
+    porque todo match de um recrutador é com uma vaga da empresa dele;
+  - o candidato apaga também as curtidas que fez, as `recruiterLikes`/`enterpriseLikes` que recebeu e os matches dele;
+  - a recusa explícita para a conta de recrutador, feita na T24, continua.
 - **Arquivos envolvidos:** alterar `front/services/auth.ts`
 - **Critérios de aceite cobertos:** nenhum CA direto (spec 6.1, `auth.ts`); sustenta CA50 (dados coerentes)
 - **Como validar:** `npm run build`. Manual: excluir a Pastelsoft → somem Carla, a curtida dela em Sandubinha, o
