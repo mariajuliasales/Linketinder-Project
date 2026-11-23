@@ -9,6 +9,14 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Tela de candidatos do recrutador no front (`pages/recruiterCandidates.ts`), na rota `#/recruiter-candidates`. Sem
+  match, o candidato aparece como "Candidato #N", só com formação, descrição e competências. Com match com a empresa,
+  aparecem nome, e-mail e só as vagas da empresa com match (título e status). A tela escolhe entre anônimo e revelado
+  só pela presença de `reveal` no card (T28). O botão curtir/descurtir vale só para a curtida do próprio recrutador e
+  usa `likeCandidate`/`unlikeCandidate`. A mensagem da autocurtida aparece como vem do serviço, e o 404 com id vira
+  uma mensagem genérica. O cabeçalho mostra o nome da empresa do recrutador (spec 4.4), por
+  `getOwnEnterpriseName` em `services/recruiters.ts`. O `id` do candidato fica só no closure do botão, e a tela não
+  mostra outros recrutadores nem quem mais curtiu (#21).
 - Tela "Recrutadores" da empresa no front (`pages/recruiters.ts`), com rota `#/recruiters` e link na navbar da
   empresa. A empresa lista os próprios recrutadores numa tabela com nome, e-mail, área e descrição, cadastra novos
   (formulário com nome, e-mail, senha, área num `select`, CPF, nascimento e descrição) e remove com confirmação. Os

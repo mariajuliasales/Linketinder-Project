@@ -781,22 +781,32 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   própria curtida) e, com match, nome, e-mail e a lista das vagas de E com match. Mensagem de erro da autocurtida.
   Os dados vêm de `listCandidateCardsForRecruiter()`, que lê o recrutador da sessão (T28).
 - **Erros 404:** a tela troca por uma mensagem genérica, sem o id interno (ver "Regras para todas as tarefas").
-- **Junção das listas:** a tela junta a listagem anônima com a lista de revelação, por id; candidato presente na
-  revelação substitui o anônimo.
-- **Arquivos envolvidos:** criar `front/pages/recruiterCandidates.ts`; alterar `front/router.ts`
-- **Critérios de aceite cobertos:** CA27–CA34 (front), CA37, CA40, CA45
+- **Junção das listas:** feita no serviço (T28). Cada `CandidateCard` traz `reveal` quando há match; a tela só escolhe
+  entre anônimo e revelado.
+- **Nome da empresa:** `getOwnEnterpriseName(recruiter)` em `services/recruiters.ts` devolve só o nome da empresa do
+  recrutador (spec 4.4), sem alterar os tipos dos cards.
+- **Arquivos envolvidos:** criar `front/pages/recruiterCandidates.ts`; alterar `front/router.ts`,
+  `front/services/recruiters.ts`
+- **Critérios de aceite cobertos:** CA27–CA34 (front), CA37, CA40, CA45 e "A tela do recrutador exibe o nome da empresa
+  (spec 4.4)"
+- **Testes:** o front não tem testes automatizados (AGENTS.md 9.5). A garantia "sem match, nada de nome ou e-mail no
+  retorno" é testada no back-end (`MatchMapperSpec`, `MatchQueryServiceSpec`, `LikeControllerSpec`); no front, ela e o
+  nome da empresa são conferidos pelo roteiro manual abaixo.
 - **Como validar:** `npm run build`. Manual como Juliana (TechSolutions):
+  - o cabeçalho mostra "Recrutando para TechSolutions Brasil";
   - Lucas aparece revelado, com só "Full Stack" nas vagas com match;
   - Sandubinha (curtiu a Full Stack, sem match) aparece anônimo, sem indicar a curtida;
   - curtir Sandubinha → revela;
   - curtir Lucas (no seed, só Rafael curte Lucas);
   - descurtir Lucas com Rafael ainda curtindo → continua revelado.
 
-  Inspecionar o hover card e os atributos.
+  Inspecionar o hover card e os atributos. No console do DevTools, conferir o retorno do serviço: card sem match não
+  tem a chave `reveal` nem `name`, `email`, `cpf`, `birthDate`, `address` ou `password`. Em `pages/recruiterCandidates.ts`,
+  conferir que a escolha entre anônimo e revelado depende só de `candidate.reveal`.
 - **Anonimato:** nada de quem mais curtiu, nem de outros recrutadores; antes do match, nenhum nome ou e-mail no DOM.
 - **Depende de:** T28
 - **Commit sugerido:** `feat(recrutador): add recruiter candidates page with like and reveal`
-- [ ] Concluída
+- [x] Concluída
 
 ### T31 — Tela de vagas do recrutador (somente leitura)
 - **Camada:** front-end

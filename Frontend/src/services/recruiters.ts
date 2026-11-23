@@ -147,6 +147,15 @@ export function listOwnRecruiters(enterprise: Enterprise): RecruiterSummary[] {
     .map(toSummary);
 }
 
+// Só o nome da empresa do recrutador, como contexto (spec 4.4): nada de CNPJ, e-mail, endereço ou outros dados dela.
+export function getOwnEnterpriseName(recruiter: Recruiter): string {
+  const enterprise = storage.enterprises.getAll().find((existing) => existing.id === recruiter.enterpriseId);
+  if (!enterprise) {
+    throw notFound('Empresa', recruiter.enterpriseId);
+  }
+  return enterprise.name;
+}
+
 // Recrutador inexistente ou de outra empresa: o mesmo erro, sem distinguir os dois casos.
 // Cada curtida dele sai pela regra de "saiu o último" de likes.ts, antes de apagar o recrutador.
 export function removeRecruiter(enterprise: Enterprise, recruiterId: string): void {
