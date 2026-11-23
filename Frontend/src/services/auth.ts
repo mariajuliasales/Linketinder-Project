@@ -1,4 +1,5 @@
 import * as storage from '../data/storage';
+import { removeWhere } from '../data/storage';
 import { listOwnVacancies } from './vacancies';
 import type { Account, Candidate, Enterprise, Recruiter } from '../types';
 
@@ -12,13 +13,6 @@ function isSameEmail(first: string, second: string): boolean {
 
 function startSession(account: Account): void {
   storage.session.set({ type: account.type, id: account.id });
-}
-
-function removeWhere<T extends { id: string }>(
-  collection: { getAll(): T[]; remove(id: string): void },
-  shouldRemove: (item: T) => boolean,
-): void {
-  collection.getAll().filter(shouldRemove).forEach((item) => collection.remove(item.id));
 }
 
 // Espelha o ON DELETE CASCADE do banco: recrutadores, curtidas e matches ligados à empresa e às vagas dela

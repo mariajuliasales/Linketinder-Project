@@ -9,6 +9,17 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Serviço de recrutadores no front, em `services/recruiters.ts`, espelhando o `RecruiterValidator` e o
+  `RecruiterService` com as mesmas mensagens de erro. `createRecruiter`: valida nome, e-mail, senha (6+), CPF com
+  dígitos verificadores, nascimento (não futuro, 18+, aceita quem faz 18 hoje) e área da lista (sem diferenciar
+  maiúsculas), confere a empresa e o e-mail entre todas as contas ("E-mail já cadastrado") e grava sem iniciar sessão.
+  `listOwnRecruiters`: só os da própria empresa. `removeRecruiter`: só da própria empresa, sem distinguir recrutador
+  inexistente de recrutador de outra empresa; cada curtida dele sai pela regra de "saiu o último" (`unlikeCandidate`).
+  `updateOwnProfile`: só descrição e senha, com senha vazia mantendo a atual. As funções devolvem só
+  `RecruiterSummary` (`id`, nome, e-mail, área e descrição), sem CPF, nascimento nem senha. A `Collection` do
+  `storage.ts` ganha `update(id, changes)`, que altera o item no lugar, e o `removeWhere` passa a ser exportado pelo
+  `storage.ts`, resolvendo a duplicação em `auth.ts` e `likes.ts`. O plano ganha a regra geral de trocar os erros 404
+  com id por uma mensagem genérica em todas as telas (#21).
 - Regras de curtida e match no front, em `services/likes.ts`, espelhando o `CandidateLikeService` e o
   `RecruiterLikeService` com as mesmas mensagens de erro. `likeVacancy`/`unlikeVacancy` (candidato): só curte vaga
   `OPEN`, cria o match se a empresa já curte o candidato e a descurtida apaga só o match daquela vaga.

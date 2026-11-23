@@ -1,4 +1,5 @@
 import * as storage from '../data/storage';
+import { removeWhere } from '../data/storage';
 import type { Candidate, Recruiter, Vacancy } from '../types';
 
 // Espelha CandidateLikeService e RecruiterLikeService do back-end, com as mesmas mensagens de erro.
@@ -15,13 +16,6 @@ function notFound(entityName: string, id: string): Error {
 
 function onlyDigits(value: string): string {
   return value.replace(/\D/g, '');
-}
-
-function removeWhere<T extends { id: string }>(
-  collection: { getAll(): T[]; remove(id: string): void },
-  shouldRemove: (item: T) => boolean,
-): void {
-  collection.getAll().filter(shouldRemove).forEach((item) => collection.remove(item.id));
 }
 
 function requireCandidate(candidateId: string): Candidate {

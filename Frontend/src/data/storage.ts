@@ -29,6 +29,7 @@ export interface Session {
 interface Collection<T extends { id: string }> {
   getAll(): T[];
   add(item: T): void;
+  update(id: string, changes: Partial<Omit<T, 'id'>>): void;
   remove(id: string): void;
 }
 
@@ -50,8 +51,17 @@ function createCollection<T extends { id: string }>(key: string): Collection<T> 
   return {
     getAll,
     add: (item) => writeJson(key, [...getAll(), item]),
+    // Altera o item no lugar, mantendo a ordem da lista
+    update: (id, changes) => writeJson(key, getAll().map((item) => (item.id === id ? { ...item, ...changes } : item))),
     remove: (id) => writeJson(key, getAll().filter((item) => item.id !== id)),
   };
+}
+
+export function removeWhere<T extends { id: string }>(
+  collection: Collection<T>,
+  shouldRemove: (item: T) => boolean,
+): void {
+  collection.getAll().filter(shouldRemove).forEach((item) => collection.remove(item.id));
 }
 
 export const candidates = createCollection<Candidate>(KEYS.candidates);
