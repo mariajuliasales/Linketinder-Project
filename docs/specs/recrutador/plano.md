@@ -204,7 +204,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   em log.
 - **Depende de:** T05
 - **Commit sugerido:** `feat(recrutador): add Recruiter model and RecruitmentArea enum`
-- [ ] Concluída
+- [x] Concluída
 
 ### T07 — Validação do recrutador
 - **Camada:** back-end
