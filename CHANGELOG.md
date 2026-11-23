@@ -9,6 +9,9 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `RecruiterRequest`, `RecruiterResponse` e `RecruiterMapper`: o request traz nome, e-mail, senha, descrição, CPF,
+  nascimento e área (convertida por `RecruitmentArea.fromName`; área inválida vira `null`); a resposta tem só `id`,
+  nome, e-mail, área e descrição, sem CPF, nascimento, idade nem senha, inclusive no cadastro (#21).
 - `RecruiterService#removeByEnterprise`: remoção do recrutador pela própria empresa, numa transação que trava a
   empresa. Para cada candidato curtido pelo recrutador, apaga a `recruiter_like` e aplica a regra de "saiu o último"
   (`RecruiterLikeService#releaseRecruiterLike`); depois apaga `recruiter` e `person`. Responde 404 "Recrutador com ID

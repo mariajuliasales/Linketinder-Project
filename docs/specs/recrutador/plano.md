@@ -439,7 +439,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** a verificação é o próprio teste de **ausência** de campos.
 - **Depende de:** T06
 - **Commit sugerido:** `feat(recrutador): add recruiter DTOs and mapper without sensitive fields`
-- [ ] Concluída
+- [x] Concluída
 
 ### T17 — DTOs e mapper de revelação
 - **Camada:** back-end
