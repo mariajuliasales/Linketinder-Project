@@ -9,6 +9,8 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Migration `001_add_recruiter_person_type.sql`, a primeira de `Database/migrations/`: adiciona o valor `RECRUITER`
+  ao ENUM `person_type`, sozinha e fora de transação, para que a próxima migration possa usá-lo.
 - Plano de implementação da feature Recrutador (`docs/specs/recrutador/plano.md`).
 - Spec da feature Recrutador (`docs/specs/recrutador/spec.md`), com modelo de dados, anonimato por perfil e decisões
   tomadas.

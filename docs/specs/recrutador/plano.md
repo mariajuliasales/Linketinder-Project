@@ -115,7 +115,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** não se aplica.
 - **Depende de:** —
 - **Commit sugerido:** `feat(recrutador): add RECRUITER value to person_type enum`
-- [ ] Concluída
+- [x] Concluída
 
 ### T02 — AGENTS.md: reset do banco e Recrutador no escopo
 - **Camada:** banco (documentação)
