@@ -659,7 +659,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** dados completos no `localStorage` são limitação aceita (spec 6.6). Nada muda nas telas nesta tarefa.
 - **Depende de:** T22
 - **Commit sugerido:** `feat(recrutador): add recruiters, likes and matches to frontend storage and seed`
-- [ ] Concluída
+- [x] Concluída
 
 ### T24 — Login e guard do recrutador
 - **Camada:** front-end
@@ -717,8 +717,10 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
     função própria: não usa o `register` de `auth.ts`, que só cadastra candidato e empresa e inicia a sessão;
   - `removeRecruiter(enterprise, id)`: só da própria empresa, com a regra de "saiu o último" de T26;
   - `listOwnRecruiters(enterprise)` → `RecruiterSummary[]`, montado por desestruturação;
-  - `updateOwnProfile(recruiter, description, password)`.
-- **Arquivos envolvidos:** criar `front/services/recruiters.ts`
+  - `updateOwnProfile(recruiter, description, password)`, que grava com o `update` novo da `Collection`;
+  - `data/storage.ts`: `Collection` ganha `update(id, changes)`, que altera o item no lugar e mantém a ordem da lista
+    (nada de `remove` seguido de `add`).
+- **Arquivos envolvidos:** criar `front/services/recruiters.ts`; alterar `front/data/storage.ts`
 - **Critérios de aceite cobertos:** CA06, CA07, CA10, CA11, CA12, CA15, CA16, CA17, CA46 (front)
 - **Como validar:** `npm run build`. O fluxo manual é feito em T29 e T32.
 - **Anonimato:** `listOwnRecruiters` devolve só `{ id, name, email, area, description }`.

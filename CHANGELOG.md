@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Armazenamento e seed do front para o recrutador: coleções `recruiters`, `candidateLikes`, `recruiterLikes`,
+  `enterpriseLikes` e `matches` no `storage.ts`, com `DATA_FORMAT_VERSION` = `5` (dados antigos no navegador são
+  recriados). O `seed.ts` copia os 5 recrutadores da migration 003 (`recruiter-1`…`recruiter-5`, senha `123456`), as 5
+  curtidas de candidatos e as 4 curtidas de empresas do `seed.sql`, as 4 curtidas de recrutadores do backfill e os 3
+  matches (Sandubinha × Backend Spring, Lucas × Full Stack e Gabriel × Cientista de Dados) (#21).
 - Tipos e rotas do recrutador no front: `RECRUITER` em `PersonType`; `Recruiter` (sem endereço e sem competências) em
   `Account`; `RECRUITMENT_AREAS`; `CandidateLike`, `RecruiterLike`, `EnterpriseLike` e `Match`, com `id`; e os tipos
   para `pages/` `RecruiterSummary`, `CandidateCard` (nome, e-mail e vagas com match só em `reveal`), `VacancyCard`
@@ -102,6 +107,8 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Plano do Recrutador: a T27 passa a incluir `data/storage.ts`, com `update(id, changes)` na `Collection`, que altera o
+  item no lugar, e o `updateOwnProfile` passa a usar esse `update` (#21).
 - Front: o `register` de `auth.ts` e o cadastro público (`pages/register.ts`) passam a aceitar só candidato e empresa
   (`SelfRegisteredType`). É só um ajuste de tipo, sem mudar o comportamento: o recrutador é cadastrado pela empresa (#21).
 - Spec e plano do Recrutador: a T22 inclui `auth.ts` e `register.ts` (só tipo); na T27, o `createRecruiter` é uma

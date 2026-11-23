@@ -1,9 +1,13 @@
-import type { Address, Candidate, Enterprise, Vacancy } from '../types';
+import type {
+  Address, Candidate, CandidateLike, Enterprise, EnterpriseLike, Match, Recruiter, RecruiterLike, Vacancy,
+} from '../types';
 
 const SEED_PASSWORD = '123456';
 
 const CANDIDATE_DEFAULTS = { type: 'CANDIDATE', password: SEED_PASSWORD } as const;
 const ENTERPRISE_DEFAULTS = { type: 'ENTERPRISE', password: SEED_PASSWORD } as const;
+// Recrutador não tem endereço nem competências; no banco, a descrição de exemplo é NULL
+const RECRUITER_DEFAULTS = { type: 'RECRUITER', password: SEED_PASSWORD, description: '' } as const;
 const OPEN_VACANCY = { status: 'OPEN' } as const;
 
 function address(cep: string, city: string, state: string): Address {
@@ -119,4 +123,60 @@ export const vacanciesSeed: Vacancy[] = [
     description: 'Atendimento e suporte aos clientes do ERP.',
     city: 'Goiânia', state: 'GO', competences: ['SQL'],
   },
+];
+
+// Cópia de Database/migrations/003_insert_example_recruiters.sql, na mesma ordem de inserção
+export const recruitersSeed: Recruiter[] = [
+  {
+    ...RECRUITER_DEFAULTS, id: 'recruiter-1', enterpriseId: 'enterprise-6', name: 'Carla Mendes Prado',
+    email: 'carla.prado@pastelsoft.com.br', cpf: '71460258371', birthDate: '1990-04-12', area: 'TI',
+  },
+  {
+    ...RECRUITER_DEFAULTS, id: 'recruiter-2', enterpriseId: 'enterprise-1', name: 'Rafael Teixeira Lopes',
+    email: 'rafael.lopes@techsolutions.com.br', cpf: '30195847601', birthDate: '1988-09-03', area: 'TI',
+  },
+  {
+    ...RECRUITER_DEFAULTS, id: 'recruiter-3', enterpriseId: 'enterprise-1', name: 'Juliana Freitas Moura',
+    email: 'juliana.moura@techsolutions.com.br', cpf: '84621593005', birthDate: '1993-02-27', area: 'RH',
+  },
+  {
+    ...RECRUITER_DEFAULTS, id: 'recruiter-4', enterpriseId: 'enterprise-3', name: 'Paulo Henrique Ramos',
+    email: 'paulo.ramos@dataanalytics.com', cpf: '59037481205', birthDate: '1985-11-18', area: 'Segurança da Informação',
+  },
+  {
+    ...RECRUITER_DEFAULTS, id: 'recruiter-5', enterpriseId: 'enterprise-4', name: 'Tatiane Rocha Batista',
+    email: 'tatiane.batista@cloudscale.com', cpf: '26384910551', birthDate: '1996-06-08', area: 'Operações',
+  },
+];
+
+// Cópia do candidate_like do seed.sql
+export const candidateLikesSeed: CandidateLike[] = [
+  { id: 'candidate-like-1', candidateId: 'candidate-6', vacancyId: 'vacancy-6' }, // Sandubinha × Backend Spring
+  { id: 'candidate-like-2', candidateId: 'candidate-6', vacancyId: 'vacancy-1' }, // Sandubinha × Full Stack
+  { id: 'candidate-like-3', candidateId: 'candidate-2', vacancyId: 'vacancy-1' }, // Lucas × Full Stack
+  { id: 'candidate-like-4', candidateId: 'candidate-4', vacancyId: 'vacancy-3' }, // Gabriel × Cientista de Dados
+  { id: 'candidate-like-5', candidateId: 'candidate-3', vacancyId: 'vacancy-2' }, // Beatriz × Groovy
+];
+
+// Cópia do enterprise_like do seed.sql
+export const enterpriseLikesSeed: EnterpriseLike[] = [
+  { id: 'enterprise-like-1', enterpriseId: 'enterprise-6', candidateId: 'candidate-6' }, // Pastelsoft × Sandubinha
+  { id: 'enterprise-like-2', enterpriseId: 'enterprise-1', candidateId: 'candidate-2' }, // TechSolutions × Lucas
+  { id: 'enterprise-like-3', enterpriseId: 'enterprise-3', candidateId: 'candidate-4' }, // DataAnalytics × Gabriel
+  { id: 'enterprise-like-4', enterpriseId: 'enterprise-4', candidateId: 'candidate-5' }, // CloudScale × Fernanda
+];
+
+// Backfill da migration 003: uma curtida do recrutador de backfill para cada enterprise_like
+export const recruiterLikesSeed: RecruiterLike[] = [
+  { id: 'recruiter-like-1', recruiterId: 'recruiter-1', candidateId: 'candidate-6' }, // Carla × Sandubinha
+  { id: 'recruiter-like-2', recruiterId: 'recruiter-2', candidateId: 'candidate-2' }, // Rafael × Lucas
+  { id: 'recruiter-like-3', recruiterId: 'recruiter-4', candidateId: 'candidate-4' }, // Paulo × Gabriel
+  { id: 'recruiter-like-4', recruiterId: 'recruiter-5', candidateId: 'candidate-5' }, // Tatiane × Fernanda
+];
+
+// Cópia do vacancy_match do seed.sql: candidate_like + enterprise_like da empresa dona da vaga
+export const matchesSeed: Match[] = [
+  { id: 'match-1', candidateId: 'candidate-6', vacancyId: 'vacancy-6' }, // Sandubinha × Backend Spring
+  { id: 'match-2', candidateId: 'candidate-2', vacancyId: 'vacancy-1' }, // Lucas × Full Stack
+  { id: 'match-3', candidateId: 'candidate-4', vacancyId: 'vacancy-3' }, // Gabriel × Cientista de Dados
 ];

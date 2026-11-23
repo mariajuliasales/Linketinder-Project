@@ -1,15 +1,25 @@
-import { candidatesSeed, enterprisesSeed, vacanciesSeed } from './seed';
-import type { Candidate, Enterprise, PersonType, Vacancy } from '../types';
+import {
+  candidateLikesSeed, candidatesSeed, enterpriseLikesSeed, enterprisesSeed, matchesSeed, recruiterLikesSeed,
+  recruitersSeed, vacanciesSeed,
+} from './seed';
+import type {
+  Candidate, CandidateLike, Enterprise, EnterpriseLike, Match, PersonType, Recruiter, RecruiterLike, Vacancy,
+} from '../types';
 
 const KEY_PREFIX = 'linketinder:';
 const KEYS = {
   candidates: `${KEY_PREFIX}candidates`,
   enterprises: `${KEY_PREFIX}enterprises`,
   vacancies: `${KEY_PREFIX}vacancies`,
+  recruiters: `${KEY_PREFIX}recruiters`,
+  candidateLikes: `${KEY_PREFIX}candidateLikes`,
+  recruiterLikes: `${KEY_PREFIX}recruiterLikes`,
+  enterpriseLikes: `${KEY_PREFIX}enterpriseLikes`,
+  matches: `${KEY_PREFIX}matches`,
   session: `${KEY_PREFIX}session`,
   dataFormatVersion: `${KEY_PREFIX}version`,
 };
-const DATA_FORMAT_VERSION = '4';
+const DATA_FORMAT_VERSION = '5';
 
 export interface Session {
   type: PersonType;
@@ -47,6 +57,11 @@ function createCollection<T extends { id: string }>(key: string): Collection<T> 
 export const candidates = createCollection<Candidate>(KEYS.candidates);
 export const enterprises = createCollection<Enterprise>(KEYS.enterprises);
 export const vacancies = createCollection<Vacancy>(KEYS.vacancies);
+export const recruiters = createCollection<Recruiter>(KEYS.recruiters);
+export const candidateLikes = createCollection<CandidateLike>(KEYS.candidateLikes);
+export const recruiterLikes = createCollection<RecruiterLike>(KEYS.recruiterLikes);
+export const enterpriseLikes = createCollection<EnterpriseLike>(KEYS.enterpriseLikes);
+export const matches = createCollection<Match>(KEYS.matches);
 
 export const session = {
   get: (): Session | null => readJson<Session | null>(KEYS.session, null),
@@ -64,5 +79,10 @@ export function resetStorageIfOutdated(): void {
   writeJson(KEYS.candidates, candidatesSeed);
   writeJson(KEYS.enterprises, enterprisesSeed);
   writeJson(KEYS.vacancies, vacanciesSeed);
+  writeJson(KEYS.recruiters, recruitersSeed);
+  writeJson(KEYS.candidateLikes, candidateLikesSeed);
+  writeJson(KEYS.recruiterLikes, recruiterLikesSeed);
+  writeJson(KEYS.enterpriseLikes, enterpriseLikesSeed);
+  writeJson(KEYS.matches, matchesSeed);
   localStorage.setItem(KEYS.dataFormatVersion, DATA_FORMAT_VERSION);
 }
