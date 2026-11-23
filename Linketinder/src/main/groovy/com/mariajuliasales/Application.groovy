@@ -66,7 +66,7 @@ final class Application {
 		CandidateLikeService candidateLikeService = new CandidateLikeService(
 				database, candidateDAO, vacancyDAO, likeDAO, matchDAO)
 		MatchQueryService matchQueryService = new MatchQueryService(
-				database, candidateDAO, enterpriseDAO, recruiterDAO, matchDAO)
+				database, candidateDAO, enterpriseDAO, recruiterDAO, matchDAO, likeDAO)
 
 		new Controllers(
 				new CandidateController(candidateService),

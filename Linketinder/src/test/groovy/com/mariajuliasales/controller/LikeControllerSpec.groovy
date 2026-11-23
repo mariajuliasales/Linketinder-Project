@@ -2,7 +2,9 @@ package com.mariajuliasales.controller
 
 import com.mariajuliasales.dao.ConnectionManager
 import com.mariajuliasales.dto.response.CandidateMatchResponse
+import com.mariajuliasales.dto.response.VacancyMatchResponse
 import com.mariajuliasales.exception.EntityNotFoundException
+import com.mariajuliasales.model.LikedVacancy
 import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.model.VacancyStatus
 import com.mariajuliasales.repository.CandidateRepository
@@ -66,7 +68,7 @@ class LikeControllerSpec extends Specification {
 	new CandidateLikeService(connectionManager, candidateRepository, vacancyRepository, likeRepository, matchRepository),
 	new RecruiterLikeService(connectionManager, recruiterRepository, candidateRepository, likeRepository, matchRepository),
 	new MatchQueryService(connectionManager, candidateRepository, enterpriseRepository, recruiterRepository,
-	matchRepository))
+	matchRepository, likeRepository))
 
 	private static Vacancy matchedVacancy(int id, String title) {
 		new Vacancy(id: id, title: title, status: VacancyStatus.OPEN)
@@ -194,5 +196,58 @@ class LikeControllerSpec extends Specification {
 
 		then:
 		thrown(EntityNotFoundException)
+	}
+
+	private static LikedVacancy liked(Map changes = [:]) {
+		Map data = [id: V1, title: 'Full Stack', description: 'APIs em Groovy', city: 'São Paulo', state: 'SP',
+			status: VacancyStatus.OPEN, competences: ['Groovy', 'Java'], enterpriseId: E1, matched: false] + changes
+		new LikedVacancy(data.id as Integer, data.title as String, data.description as String, data.city as String,
+				data.state as String, data.status as VacancyStatus, data.competences as List<String>,
+				data.enterpriseId as Integer, data.matched as boolean)
+	}
+
+	def "candidate liked vacancies should reveal the enterprise only on the matched vacancy"() {
+		given: 'C5 curtiu V1 de E1 (OPEN, com match) e V2 de E1 (sem match, depois pausada)'
+		likeRepository.likedVacanciesOf(connection, C5) >> [
+			liked(id: V1, matched: true),
+			liked(id: V2, title: 'Back End', status: VacancyStatus.PAUSED, competences: [])
+		]
+
+		when:
+		List<VacancyMatchResponse> responses = controller.listLikedVacancies(C5)
+
+		then:
+		responses*.id() == [V1, V2]
+		with(responses[0]) {
+			title() == 'Full Stack'
+			description() == 'APIs em Groovy'
+			city() == 'São Paulo'
+			state() == 'SP'
+			status() == 'OPEN'
+			competences() == ['Groovy', 'Java']
+			enterpriseName() == 'TechSolutions Brasil'
+			enterpriseEmail() == 'contato@techsolutions.com.br'
+		}
+		with(responses[1]) {
+			title() == 'Back End'
+			status() == 'PAUSED'
+			competences() == []
+			enterpriseName() == null
+			enterpriseEmail() == null
+		}
+	}
+
+	def "liked vacancy response should not carry the enterprise id or cnpj"() {
+		expect:
+		VacancyMatchResponse.recordComponents*.name.intersect(['enterpriseId', 'cnpj', 'enterprise']).isEmpty()
+	}
+
+	def "liked vacancies of a missing candidate should throw not found"() {
+		when:
+		controller.listLikedVacancies(99)
+
+		then:
+		thrown(EntityNotFoundException)
+		0 * likeRepository.likedVacanciesOf(_, _)
 	}
 }

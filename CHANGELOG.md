@@ -9,6 +9,13 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- "Minhas curtidas" do candidato no back-end: `LikeController#listLikedVacancies` devolve `VacancyMatchResponse` com as
+  vagas curtidas em qualquer status, em ordem crescente de id, com descrição, cidade/UF (endereço da vaga), status e
+  competências. Nome e e-mail da empresa só nas vagas com match; sem `enterpriseId` nem CNPJ. Candidato inexistente
+  responde 404. Nova consulta `LikeRepository#likedVacanciesOf` (uma só, sem colunas de `person`; competências numa
+  subconsulta `ARRAY`), os records `LikedVacancy` e `LikedVacancyView` e `MatchQueryService#listLikedVacancies`, que
+  busca a empresa uma vez por empresa distinta e só para vagas com match. Sobrecarga
+  `MatchMapper#toVacancyMatchResponse(LikedVacancyView)`. O `MatchQueryService` passa a receber o `LikeRepository` (#21).
 - `LikeController` e `MatchQueryService`: o controller expõe `candidateLikes`/`candidateUnlikes` e
   `recruiterLikes`/`recruiterUnlikes` (delegam ao `CandidateLikeService` e ao `RecruiterLikeService`) e as listas de
   revelação `listCandidatesForRecruiter` e `listCandidatesForEnterprise`, sem rota na API. As listas trazem só os

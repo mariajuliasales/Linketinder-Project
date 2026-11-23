@@ -3,10 +3,13 @@ package com.mariajuliasales.service
 import com.mariajuliasales.dao.ConnectionManager
 import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.model.CandidateMatches
+import com.mariajuliasales.model.LikedVacancy
+import com.mariajuliasales.model.LikedVacancyView
 import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.model.VacancyStatus
 import com.mariajuliasales.repository.CandidateRepository
 import com.mariajuliasales.repository.EnterpriseRepository
+import com.mariajuliasales.repository.LikeRepository
 import com.mariajuliasales.repository.MatchRepository
 import com.mariajuliasales.repository.RecruiterRepository
 import spock.lang.Specification
@@ -32,7 +35,7 @@ class MatchQueryServiceSpec extends Specification {
 		withConnection(_) >> { Closure work -> work(connection) }
 	}
 	CandidateRepository candidateRepository = Mock()
-	EnterpriseRepository enterpriseRepository = Stub() {
+	EnterpriseRepository enterpriseRepository = Mock() {
 		findById(E1) >> validEnterprise(id: E1)
 		findById(E2) >> validEnterprise(id: E2)
 		findById(_) >> null
@@ -43,8 +46,13 @@ class MatchQueryServiceSpec extends Specification {
 		findById(_) >> null
 	}
 	MatchRepository matchRepository = Mock()
+	LikeRepository likeRepository = Mock()
 	MatchQueryService service = new MatchQueryService(connectionManager, candidateRepository, enterpriseRepository,
-	recruiterRepository, matchRepository)
+	recruiterRepository, matchRepository, likeRepository)
+
+	static final int V1 = 10
+	static final int V2 = 11
+	static final int V3 = 12
 
 	private static Vacancy vacancy(int id) {
 		new Vacancy(id: id, title: "Vaga ${id}", status: VacancyStatus.OPEN)
@@ -167,5 +175,124 @@ class MatchQueryServiceSpec extends Specification {
 
 		then:
 		thrown(UnsupportedOperationException)
+	}
+
+	private static LikedVacancy liked(Map changes = [:]) {
+		Map data = [id: V1, title: 'Full Stack', description: 'APIs em Groovy', city: 'São Paulo', state: 'SP',
+			status: VacancyStatus.OPEN, competences: ['Groovy', 'Java'], enterpriseId: E1, matched: false] + changes
+		new LikedVacancy(data.id as Integer, data.title as String, data.description as String, data.city as String,
+				data.state as String, data.status as VacancyStatus, data.competences as List<String>,
+				data.enterpriseId as Integer, data.matched as boolean)
+	}
+
+	def "liked vacancies should keep every status and reveal the enterprise only on matched ones"() {
+		given: 'V1 de E1 com match; V2 de E1 sem match e pausada'
+		candidateRepository.findById(C5) >> validCandidate(id: C5)
+		likeRepository.likedVacanciesOf(connection, C5) >> [
+			liked(id: V1, matched: true),
+			liked(id: V2, title: 'Back End', status: VacancyStatus.PAUSED)
+		]
+
+		when:
+		List<LikedVacancyView> result = service.listLikedVacancies(C5)
+
+		then:
+		1 * enterpriseRepository.findById(E1) >> validEnterprise(id: E1)
+		result*.vacancy()*.id() == [V1, V2]
+		result*.vacancy()*.status() == [VacancyStatus.OPEN, VacancyStatus.PAUSED]
+		result*.enterpriseName() == ['TechSolutions Brasil', null]
+		result*.enterpriseEmail() == ['contato@techsolutions.com.br', null]
+	}
+
+	def "liked vacancies should keep the vacancy data and order from the repository"() {
+		given:
+		candidateRepository.findById(C5) >> validCandidate(id: C5)
+		likeRepository.likedVacanciesOf(connection, C5) >> [
+			liked(id: V1),
+			liked(id: V2, title: 'Sem competências', competences: [])
+		]
+
+		when:
+		List<LikedVacancyView> result = service.listLikedVacancies(C5)
+
+		then:
+		result*.vacancy()*.id() == [V1, V2]
+		with(result[0].vacancy()) {
+			title() == 'Full Stack'
+			description() == 'APIs em Groovy'
+			city() == 'São Paulo'
+			state() == 'SP'
+			competences() == ['Groovy', 'Java']
+		}
+		result[1].vacancy().competences() == []
+	}
+
+	def "liked vacancy competences should be an immutable copy and never null"() {
+		given:
+		List<String> names = ['Java']
+
+		when:
+		LikedVacancy vacancy = liked(competences: names)
+		names << 'Groovy'
+
+		then:
+		vacancy.competences() == ['Java']
+		liked(competences: null).competences() == []
+
+		when:
+		vacancy.competences().add('Python')
+
+		then:
+		thrown(UnsupportedOperationException)
+	}
+
+	def "vacancies without match should never read enterprise data"() {
+		given:
+		candidateRepository.findById(C5) >> validCandidate(id: C5)
+		likeRepository.likedVacanciesOf(connection, C5) >> [
+			liked(id: V1),
+			liked(id: V2, status: VacancyStatus.CLOSED, enterpriseId: E2)
+		]
+
+		when:
+		List<LikedVacancyView> result = service.listLikedVacancies(C5)
+
+		then:
+		0 * enterpriseRepository._
+		result*.enterpriseName() == [null, null]
+		result*.enterpriseEmail() == [null, null]
+	}
+
+	def "matched vacancies of the same enterprise should load the enterprise only once"() {
+		given:
+		candidateRepository.findById(C5) >> validCandidate(id: C5)
+
+		when:
+		List<LikedVacancyView> result = service.listLikedVacancies(C5)
+
+		then: 'uma consulta de curtidas e uma busca por empresa distinta'
+		1 * likeRepository.likedVacanciesOf(connection, C5) >> [
+			liked(id: V1, matched: true),
+			liked(id: V2, matched: true),
+			liked(id: V3, matched: true, enterpriseId: E2)
+		]
+		1 * enterpriseRepository.findById(E1) >> validEnterprise(id: E1)
+		1 * enterpriseRepository.findById(E2) >> validEnterprise(id: E2, name: 'Outra', email: 'rh@outra.com')
+		0 * enterpriseRepository._
+		result*.enterpriseName() == ['TechSolutions Brasil', 'TechSolutions Brasil', 'Outra']
+	}
+
+	def "liked vacancies of a missing candidate should throw not found without querying likes"() {
+		given:
+		candidateRepository.findById(99) >> null
+
+		when:
+		service.listLikedVacancies(99)
+
+		then:
+		EntityNotFoundException error = thrown()
+		error.message.contains('Candidato')
+		0 * likeRepository._
+		0 * enterpriseRepository._
 	}
 }

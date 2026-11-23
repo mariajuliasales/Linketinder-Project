@@ -554,21 +554,47 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T20 — "Minhas curtidas" do candidato no back-end
 - **Camada:** back-end
 - **O que será feito:** `LikeController.listLikedVacancies(candidateId)` → `List<VacancyMatchResponse>` com as vagas
-  curtidas em qualquer status, e nome e e-mail da empresa só nas com match. Nova consulta no `LikeRepository`:
-  `likedVacanciesOf(candidateId)`, com id da vaga e flag de match. Os dados da vaga vêm do `VacancyRepository`, e
-  nome/e-mail da empresa só são lidos quando a flag de match é verdadeira.
-  O controller delega ao `MatchQueryService` (criado na T19), que ganha `listLikedVacancies(candidateId)`.
+  curtidas em qualquer status, e nome e e-mail da empresa só nas com match.
+  - Nova consulta `LikeRepository.likedVacanciesOf(connection, candidateId)` → `List<LikedVacancy>`, em ordem crescente
+    de id da vaga (`ORDER BY` no SQL). O SQL faz `candidate_like JOIN vacancy JOIN address LEFT JOIN vacancy_match` e
+    lê só dados da vaga: `vacancy` (id, título, descrição, status, `enterprise_id`), cidade/UF de `address` pela
+    `v.address_id` (endereço da vaga; `address_id` é `NOT NULL`, por isso `JOIN`), as competências da vaga numa
+    subconsulta `ARRAY(...)` ordenada por nome, e a flag de match. Nenhuma coluna de `person`. Uma consulta só.
+  - O `java.sql.Array` é convertido com `getArray()` para `List<String>` (o tipo que o `VacancyMatchResponse` usa);
+    sem competências → lista vazia, nunca `null`. O `LikedVacancy` guarda uma cópia imutável.
+  - `LikedVacancy` é um `record` em `main/model/` com id, título, descrição, cidade, UF, status, competências,
+    `enterpriseId` e `matched`. Não carrega nome, e-mail nem CNPJ.
+  - `LikedVacancyView(LikedVacancy vacancy, String enterpriseName, String enterpriseEmail)` é um `record` em
+    `main/model/`; nome e e-mail são `null` sem match. É o retorno do service: a entidade `Enterprise` (com CNPJ) não
+    sai do service.
+  - `MatchQueryService.listLikedVacancies(candidateId)` → `List<LikedVacancyView>`: candidato inexistente → 404; busca
+    as vagas curtidas com uma consulta; para as com `matched = true`, busca nome/e-mail da empresa pelo
+    `EnterpriseRepository`, uma vez por empresa distinta (não por vaga). Vagas sem match nunca disparam leitura de dados
+    da empresa. A ordem vem do `ORDER BY` e é mantida na lista. Não usa `VacancyRepository`/`VacancyDAO`.
+  - O `MatchMapper` (sobrecarga `toVacancyMatchResponse(LikedVacancyView)`, como na T19) preenche todos os campos de
+    vaga do DTO e copia nome/e-mail da empresa só quando `matched` é verdadeiro. O DTO não tem `enterpriseId` nem
+    `cnpj`. Nenhum campo de vaga fica nulo por causa do SQL.
+  - **Sem teste com banco:** o SQL do `likedVacanciesOf` (incluindo a subconsulta `ARRAY` e a conversão do
+    `java.sql.Array`) não tem teste automatizado com PostgreSQL (AGENTS.md, seção 12). O mapeamento é coberto no
+    `MatchQueryServiceSpec` com o repositório mockado, incluindo vaga sem competências.
+  - O construtor do `MatchQueryService` passa a receber só o `LikeRepository` a mais; em
+    `Application.groovy#createControllers`, a única mudança é passar o `likeDAO`.
 - **Arquivos envolvidos:** alterar `main/controller/LikeController.groovy`, `test/controller/LikeControllerSpec.groovy`,
-  `main/repository/LikeRepository.groovy`, `main/dao/LikeDAO.groovy`,
-  `main/service/MatchQueryService.groovy`, `test/service/MatchQueryServiceSpec.groovy`
+  `main/repository/LikeRepository.groovy`, `main/dao/LikeDAO.groovy`, `main/service/MatchQueryService.groovy`,
+  `test/service/MatchQueryServiceSpec.groovy`, `main/mapper/MatchMapper.groovy`, `main/Application.groovy` (só passar o
+  `likeDAO`); criar `main/model/LikedVacancy.groovy` e `main/model/LikedVacancyView.groovy`
 - **Critérios de aceite cobertos:** CA39, CA42, CA52 (back)
-- **Como validar:** `./gradlew test --tests '*LikeControllerSpec'`: V1 com match tem `enterpriseName`/`enterpriseEmail`;
-  V2 sem match (`PAUSED`) aparece com status e **sem** esses campos; nenhum item tem `enterpriseId` ou `cnpj`.
-- **Anonimato:** `Vacancy.enterprise` (que carrega o CNPJ) nunca vai para o DTO; o mapper copia só nome e e-mail, e só
-  com match.
+- **Como validar:** `./gradlew test --tests '*LikeControllerSpec' --tests '*MatchQueryServiceSpec'`: V1 com match tem
+  `enterpriseName`/`enterpriseEmail`; V2 sem match (`PAUSED`) aparece com status e **sem** esses campos; nenhum item tem
+  `enterpriseId` ou `cnpj`; candidato inexistente → 404; o repositório de empresa não é chamado para vagas sem match;
+  duas vagas com match da mesma empresa geram uma só busca da empresa; descrição, cidade, UF e competências chegam ao
+  DTO; vaga sem competências tem lista vazia.
+- **Anonimato:** o SQL não lê colunas de `person`; `LikedVacancy` não carrega dados da empresa; nome e e-mail só são
+  lidos e copiados nas vagas com match; a entidade `Enterprise` não sai do service; CNPJ e `enterpriseId` nunca vão
+  para o DTO.
 - **Depende de:** T19
 - **Commit sugerido:** `feat(recrutador): list candidate liked vacancies with reveal after match`
-- [ ] Concluída
+- [x] Concluída
 
 ### T21 — Vagas da empresa para o recrutador (somente leitura)
 - **Camada:** back-end

@@ -1,5 +1,6 @@
 package com.mariajuliasales.repository
 
+import com.mariajuliasales.model.LikedVacancy
 import com.mariajuliasales.model.VacancyStatus
 
 import java.sql.Connection
@@ -8,7 +9,7 @@ import java.sql.Connection
  * Curtidas de candidato (candidate_like), de recrutador (recruiter_like) e da empresa (enterprise_like).
  * Todos os métodos rodam dentro da transação aberta pelo serviço, que guarda as regras (vaga OPEN, invariante
  * enterprise_like ⇔ recruiter_like, match). Nenhuma regra fica no SQL.
- * Os métodos devolvem só ids, status e boolean, nunca dados pessoais.
+ * Os métodos devolvem só ids, status, boolean e dados de vaga, nunca dados pessoais.
  */
 interface LikeRepository {
 
@@ -28,6 +29,13 @@ interface LikeRepository {
 
 	/** Devolve false se a curtida não existia. O match (C, V) cai em cascata pela FK. */
 	boolean deleteCandidateLike(Connection connection, int candidateId, int vacancyId)
+
+	/**
+	 * Vagas curtidas pelo candidato, em qualquer status, em ordem crescente de id, com a flag de match.
+	 * Lê só dados da vaga: colunas de vacancy, cidade/UF do endereço da vaga (vacancy.address_id) e nomes das
+	 * competências da vaga (lista vazia se não houver). Nenhuma coluna de person. Só leitura, sem trava.
+	 */
+	List<LikedVacancy> likedVacanciesOf(Connection connection, int candidateId)
 
 	boolean recruiterLikeExists(Connection connection, int recruiterId, int candidateId)
 

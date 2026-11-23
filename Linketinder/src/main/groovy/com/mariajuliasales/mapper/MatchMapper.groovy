@@ -5,6 +5,8 @@ import com.mariajuliasales.dto.response.MatchedVacancyResponse
 import com.mariajuliasales.dto.response.VacancyMatchResponse
 import com.mariajuliasales.model.Candidate
 import com.mariajuliasales.model.CandidateMatches
+import com.mariajuliasales.model.LikedVacancy
+import com.mariajuliasales.model.LikedVacancyView
 import com.mariajuliasales.model.Vacancy
 
 /**
@@ -68,6 +70,29 @@ final class MatchMapper {
 				CompetenceMapper.toNames(vacancy.competences),
 				matched ? vacancy.enterprise?.name : null,
 				matched ? vacancy.enterprise?.email : null
+				)
+	}
+
+	/**
+	 * Vaga curtida pelo candidato ("Minhas curtidas"). Nome e e-mail da empresa só entram quando
+	 * vacancy.matched() é verdadeiro; enterpriseId e CNPJ nunca entram.
+	 */
+	static VacancyMatchResponse toVacancyMatchResponse(LikedVacancyView view) {
+		LikedVacancy liked = view?.vacancy()
+		if (liked == null) {
+			return null
+		}
+		boolean matched = liked.matched()
+		new VacancyMatchResponse(
+				liked.id(),
+				liked.title(),
+				liked.description(),
+				liked.city(),
+				liked.state(),
+				liked.status()?.name(),
+				liked.competences(),
+				matched ? view.enterpriseName() : null,
+				matched ? view.enterpriseEmail() : null
 				)
 	}
 }

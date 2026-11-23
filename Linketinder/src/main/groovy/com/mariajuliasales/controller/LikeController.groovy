@@ -1,15 +1,18 @@
 package com.mariajuliasales.controller
 
 import com.mariajuliasales.dto.response.CandidateMatchResponse
+import com.mariajuliasales.dto.response.VacancyMatchResponse
 import com.mariajuliasales.mapper.MatchMapper
 import com.mariajuliasales.model.CandidateMatches
+import com.mariajuliasales.model.LikedVacancyView
 import com.mariajuliasales.service.CandidateLikeService
 import com.mariajuliasales.service.MatchQueryService
 import com.mariajuliasales.service.RecruiterLikeService
 
 /**
  * Curtidas e listas de revelação. As listas devolvem só CandidateMatchResponse de candidatos com match com a empresa;
- * candidato sem match continua só em CandidateController.findAll (anônimo). Nunca devolve entidades.
+ * candidato sem match continua só em CandidateController.findAll (anônimo). "Minhas curtidas" do candidato devolve
+ * VacancyMatchResponse, com nome e e-mail da empresa só nas vagas com match. Nunca devolve entidades.
  */
 class LikeController {
 
@@ -46,6 +49,12 @@ class LikeController {
 
 	List<CandidateMatchResponse> listCandidatesForEnterprise(int enterpriseId) {
 		toResponses(matchQueryService.candidatesWithMatchesForEnterprise(enterpriseId))
+	}
+
+	List<VacancyMatchResponse> listLikedVacancies(int candidateId) {
+		matchQueryService.listLikedVacancies(candidateId).collect { LikedVacancyView view ->
+			MatchMapper.toVacancyMatchResponse(view)
+		}
 	}
 
 	private static List<CandidateMatchResponse> toResponses(List<CandidateMatches> candidates) {

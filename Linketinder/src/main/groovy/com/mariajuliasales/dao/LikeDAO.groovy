@@ -1,5 +1,6 @@
 package com.mariajuliasales.dao
 
+import com.mariajuliasales.model.LikedVacancy
 import com.mariajuliasales.model.VacancyStatus
 import com.mariajuliasales.repository.LikeRepository
 
@@ -8,7 +9,8 @@ import java.sql.ResultSet
 
 /**
  * SQL das curtidas. Cada método é uma única instrução e usa a Connection da transação do serviço.
- * Os INSERT usam ON CONFLICT DO NOTHING. As consultas selecionam só ids, status e EXISTS.
+ * Os INSERT usam ON CONFLICT DO NOTHING. As consultas selecionam só ids, status, EXISTS e dados de vaga
+ * (vacancy, endereço da vaga e competências da vaga); nunca colunas de person.
  * Ordem das travas: sempre enterprise antes de vacancy.
  */
 class LikeDAO implements LikeRepository {
@@ -21,6 +23,22 @@ class LikeDAO implements LikeRepository {
 	private static final String INSERT_CANDIDATE_LIKE =
 	'INSERT INTO candidate_like (candidate_id, vacancy_id) VALUES (?, ?) ON CONFLICT DO NOTHING'
 	private static final String DELETE_CANDIDATE_LIKE = 'DELETE FROM candidate_like WHERE candidate_id = ? AND vacancy_id = ?'
+	private static final String LIKED_VACANCIES_OF = '''
+            SELECT v.id, v.title, v.description, v.status, v.enterprise_id, a.city, a.state,
+                   ARRAY(
+                       SELECT co.name
+                       FROM vacancy_competence vc
+                       JOIN competence co ON co.id = vc.competence_id
+                       WHERE vc.vacancy_id = v.id
+                       ORDER BY co.name
+                   ) AS competences,
+                   (vm.vacancy_id IS NOT NULL) AS matched
+            FROM candidate_like cl
+            JOIN vacancy v ON v.id = cl.vacancy_id
+            JOIN address a ON a.id = v.address_id
+            LEFT JOIN vacancy_match vm ON vm.candidate_id = cl.candidate_id AND vm.vacancy_id = cl.vacancy_id
+            WHERE cl.candidate_id = ?
+            ORDER BY v.id'''
 
 	private static final String RECRUITER_LIKE_EXISTS =
 	'SELECT EXISTS (SELECT 1 FROM recruiter_like WHERE recruiter_id = ? AND candidate_id = ?) AS found'
@@ -71,6 +89,34 @@ class LikeDAO implements LikeRepository {
 	@Override
 	boolean deleteCandidateLike(Connection connection, int candidateId, int vacancyId) {
 		SqlExecutor.update(connection, DELETE_CANDIDATE_LIKE, [candidateId, vacancyId]) > 0
+	}
+
+	@Override
+	List<LikedVacancy> likedVacanciesOf(Connection connection, int candidateId) {
+		SqlExecutor.query(connection, LIKED_VACANCIES_OF, [candidateId]) { ResultSet row ->
+			new LikedVacancy(
+					row.getInt('id'),
+					row.getString('title'),
+					row.getString('description'),
+					row.getString('city'),
+					row.getString('state'),
+					VacancyStatus.valueOf(row.getString('status')),
+					competenceNames(row.getArray('competences')),
+					row.getInt('enterprise_id'),
+					row.getBoolean('matched'))
+		}
+	}
+
+	/** Converte o ARRAY do PostgreSQL; sem competências (ou nulo) → lista vazia. O LikedVacancy copia para imutável. */
+	private static List<String> competenceNames(java.sql.Array array) {
+		if (array == null) {
+			return []
+		}
+		try {
+			(array.array as String[]).toList()
+		} finally {
+			array.free()
+		}
 	}
 
 	@Override
