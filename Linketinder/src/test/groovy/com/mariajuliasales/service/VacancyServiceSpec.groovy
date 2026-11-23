@@ -4,6 +4,9 @@ import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.exception.ValidationException
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.model.Vacancy
+import com.mariajuliasales.model.VacancyStatus
+import com.mariajuliasales.repository.LikeRepository
+import com.mariajuliasales.repository.MatchRepository
 import com.mariajuliasales.repository.VacancyRepository
 import com.mariajuliasales.service.validator.VacancyValidator
 import spock.lang.Specification
@@ -111,6 +114,26 @@ class VacancyServiceSpec extends Specification {
 		then:
 		1 * vacancyRepository.update(vacancy) >> vacancy
 		result == vacancy
+	}
+
+	def "update should change the status to #status without touching likes or matches (B17)"() {
+		given:
+		Vacancy vacancy = validVacancy(status: status)
+
+		when:
+		vacancyService.update(vacancy)
+
+		then:
+		1 * vacancyRepository.update({ Vacancy saved -> saved.status == status }) >> vacancy
+		0 * _
+
+		and: "the service has no access to likes or matches"
+		VacancyService.declaredConstructors.every { constructor ->
+			!constructor.parameterTypes.any { it in [MatchRepository, LikeRepository] }
+		}
+
+		where:
+		status << [VacancyStatus.PAUSED, VacancyStatus.CLOSED]
 	}
 
 	def "update should not save an invalid vacancy"() {

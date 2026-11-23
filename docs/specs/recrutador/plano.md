@@ -51,6 +51,9 @@ deixa a escolha explícita e estável.
   `SELECT id FROM enterprise WHERE id = ? FOR UPDATE` na empresa E envolvida. Essa trava serializa as curtidas e
   descurtidas de recrutadores de E, as curtidas de candidatos em vagas de E e a remoção de recrutador. O teste confere a
   **ordem**: a trava é a primeira chamada da transação.
+  - A trava de E **não** protege o status da vaga: `VacancyDAO#update` e `#delete` não travam E. Por isso, quem
+    depende do status `OPEN` relê a vaga com `FOR SHARE` dentro da transação, depois de travar E.
+  - **Ordem das travas: sempre enterprise antes de vacancy. Nenhum fluxo pode travar vacancy e depois enterprise.**
 - **`RecruiterDAO`** não estende o `PersonDAO`. Ele tem SQL próprio para `person` (com `address_id` nulo e sem
   competências) e reaproveita só o `SqlExecutor`. As consultas nunca selecionam `password_hash`.
 - **Área:** enum `RecruitmentArea` no back-end, espelhando a tabela, com o nome de exibição (`TI`, `RH`,
@@ -306,17 +309,35 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T12 — Curtida do candidato
 - **Camada:** back-end
 - **O que será feito:** `CandidateLikeService` com `like(candidateId, vacancyId)` e `unlike(candidateId, vacancyId)`,
-  numa transação. Na curtida, a ordem é: trava E → vaga existe (404 "Vaga com ID `<id>` não existe") → vaga `OPEN` (400 "Só é
-  possível curtir vagas abertas") → grava a curtida (idempotente) → se `enterprise_like(E, C)` existe, cria o match. A
-  descurtida funciona em qualquer status; o match cai pela FK.
-- **Arquivos envolvidos:** criar `main/service/CandidateLikeService.groovy`, `test/service/CandidateLikeServiceSpec.groovy`
+  numa transação. Na curtida, a ordem é:
+  - antes da transação: candidato existe (`CandidateRepository`, 404 "Candidato com ID `<id>` não existe") → carrega a
+    vaga só para descobrir E (404 "Vaga com ID `<id>` não existe");
+  - na transação: trava E (primeira chamada) → relê o status da vaga com `FOR SHARE` (`lockVacancyStatus`): existe
+    (404 "Vaga com ID `<id>` não existe") e está `OPEN` (400 "Só é possível curtir vagas abertas") → grava a curtida
+    (idempotente) → se `enterprise_like(E, C)` existe, cria o match.
+
+  O status é conferido só na releitura: conferir fora da transação deixaria uma janela em que a vaga é pausada ou
+  fechada antes da trava. Novo método `lockVacancyStatus(connection, vacancyId)` no `LikeRepository`/`LikeDAO`
+  (`SELECT status FROM vacancy WHERE id = ? FOR SHARE`; `null` se a vaga não existe). Ordem das travas: sempre
+  enterprise antes de vacancy. A descurtida funciona em qualquer status; o match cai pela FK.
+- **Arquivos envolvidos:** criar `main/service/CandidateLikeService.groovy`, `test/service/CandidateLikeServiceSpec.groovy`;
+  alterar `main/repository/LikeRepository.groovy`, `main/dao/LikeDAO.groovy` (`lockVacancyStatus`) e
+  `test/service/VacancyServiceSpec.groovy` (B17)
 - **Critérios de aceite cobertos:** CA22 (B6, B11), CA23, CA24, CA25 (B12), CA26 (B17)
 - **Como validar:** `./gradlew test --tests '*CandidateLikeServiceSpec'`:
   - `PAUSED`/`CLOSED` → 400 e `0 * insertCandidateLike`;
+  - vaga `OPEN` na primeira leitura e `CLOSED` no `lockVacancyStatus` → 400, nada salvo;
+  - candidato inexistente → 404 "Candidato com ID `<id>` não existe", nada salvo;
+  - ordem: `lockEnterprise` → `lockVacancyStatus` → `insertCandidateLike`;
   - sem `enterprise_like` → `0 * insertMatch`; com `enterprise_like` → `1 * insertMatch`;
   - curtir de novo e descurtir sem curtida → sem erro;
   - descurtir não chama `deleteEnterpriseLike` (B12);
-  - B17: um teste no `VacancyServiceSpec` que confere que `update` de status não usa `MatchRepository`.
+  - B17: um teste no `VacancyServiceSpec` que confere que `update` de status não usa `MatchRepository`;
+  - manual, com duas sessões `psql` contra um banco descartável:
+    - sessão A: `BEGIN;` → `SELECT id FROM enterprise WHERE id = <E> FOR UPDATE;` →
+      `SELECT status FROM vacancy WHERE id = <V> FOR SHARE;`;
+    - sessão B: `UPDATE vacancy SET status = 'CLOSED' WHERE id = <V>;` precisa ficar **bloqueada**;
+    - sessão A: `COMMIT;` (ou `ROLLBACK;`) → o `UPDATE` da sessão B termina.
 - **Anonimato:** não se aplica (sem saída para terceiros).
 - **Depende de:** T10, T11
 - **Commit sugerido:** `feat(recrutador): add candidate like service with match on open vacancies`
@@ -328,7 +349,13 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   candidato existem (404 "Candidato com ID `<id>` não existe") → mesmo CPF (400 "Você não pode curtir o seu próprio perfil de
   candidato.") → trava E → grava a `recruiter_like` (idempotente) → se é a primeira de E, grava `enterprise_like` e
   cria o match com cada vaga **`OPEN`** de E que C curtiu.
-- **Arquivos envolvidos:** criar `main/service/RecruiterLikeService.groovy`, `test/service/RecruiterLikeServiceSpec.groovy`
+
+  **Nota (concorrência):** a trava de E não protege o status das vagas (`VacancyDAO#update` não trava E). Por isso o
+  `likedVacanciesOfEnterprise` do `MatchDAO` ganha `FOR SHARE OF v`, implementado nesta tarefa: as vagas lidas não
+  mudam de status nem somem até o fim da transação. Ordem das travas: sempre enterprise antes de vacancy. Nenhum
+  fluxo pode travar vacancy e depois enterprise.
+- **Arquivos envolvidos:** criar `main/service/RecruiterLikeService.groovy`, `test/service/RecruiterLikeServiceSpec.groovy`;
+  alterar `main/dao/MatchDAO.groovy` (`FOR SHARE OF v`)
 - **Critérios de aceite cobertos:** CA27 (B1), CA28 (B2), CA29 (B3), CA31 (B7, B10), CA32 (B9), CA33 (B13), CA34 (B14),
   CA35 (B16)
 - **Como validar:** `./gradlew test --tests '*RecruiterLikeServiceSpec'`, com um caso por B1, B2, B3, B7, B9, B10, B13,

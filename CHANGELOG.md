@@ -9,6 +9,9 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `CandidateLikeService`: curtida do candidato em vaga, numa transação que trava a empresa e relê o status da vaga com
+  `FOR SHARE` (só vagas `OPEN`; 404 para candidato ou vaga inexistente), cria o match quando a empresa já curte o
+  candidato, e descurtida idempotente em qualquer status. `LikeRepository` ganha `lockVacancyStatus` (#21).
 - Repositório de match (`MatchRepository`/`MatchDAO`) com as vagas curtidas da empresa e seus status (o filtro `OPEN`
   fica no serviço), criação idempotente e remoção dos matches do candidato com a empresa (#21).
 - Repositório de curtidas (`LikeRepository`/`LikeDAO`) com trava da empresa e operações idempotentes (#21).

@@ -183,6 +183,8 @@ Os 404 usam o formato padrão do projeto, "`<Entidade>` com ID `<id>` não exist
 - **Vaga:**
   - curtir vaga `PAUSED` ou `CLOSED` → 400. Nada é salvo e nenhum match é criado;
   - curtir vaga inexistente → 404 "Vaga com ID `<id>` não existe".
+- **Candidato:**
+  - curtir com candidato inexistente → 404 "Candidato com ID `<id>` não existe", nada salvo.
 - **Curtidas repetidas ou inexistentes:**
   - curtir de novo a mesma vaga → nada muda e não há erro (idempotente);
   - descurtir uma vaga não curtida → nada muda e não há erro.

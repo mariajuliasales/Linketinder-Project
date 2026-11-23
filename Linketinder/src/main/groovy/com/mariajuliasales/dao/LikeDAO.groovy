@@ -1,5 +1,6 @@
 package com.mariajuliasales.dao
 
+import com.mariajuliasales.model.VacancyStatus
 import com.mariajuliasales.repository.LikeRepository
 
 import java.sql.Connection
@@ -7,11 +8,13 @@ import java.sql.ResultSet
 
 /**
  * SQL das curtidas. Cada método é uma única instrução e usa a Connection da transação do serviço.
- * Os INSERT usam ON CONFLICT DO NOTHING. As consultas selecionam só ids e EXISTS.
+ * Os INSERT usam ON CONFLICT DO NOTHING. As consultas selecionam só ids, status e EXISTS.
+ * Ordem das travas: sempre enterprise antes de vacancy.
  */
 class LikeDAO implements LikeRepository {
 
 	private static final String LOCK_ENTERPRISE = 'SELECT id FROM enterprise WHERE id = ? FOR UPDATE'
+	private static final String LOCK_VACANCY_STATUS = 'SELECT status FROM vacancy WHERE id = ? FOR SHARE'
 
 	private static final String CANDIDATE_LIKE_EXISTS =
 	'SELECT EXISTS (SELECT 1 FROM candidate_like WHERE candidate_id = ? AND vacancy_id = ?) AS found'
@@ -46,6 +49,13 @@ class LikeDAO implements LikeRepository {
 	@Override
 	boolean lockEnterprise(Connection connection, int enterpriseId) {
 		SqlExecutor.queryFirst(connection, LOCK_ENTERPRISE, [enterpriseId]) { ResultSet row -> row.getInt('id') } != null
+	}
+
+	@Override
+	VacancyStatus lockVacancyStatus(Connection connection, int vacancyId) {
+		SqlExecutor.queryFirst(connection, LOCK_VACANCY_STATUS, [vacancyId]) { ResultSet row ->
+			VacancyStatus.valueOf(row.getString('status'))
+		}
 	}
 
 	@Override
