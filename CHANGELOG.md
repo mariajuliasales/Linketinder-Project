@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Tela de vagas do recrutador no front (`pages/recruiterVacancies.ts`), na rota `#/recruiter-vacancies`, somente
+  leitura. Lista todas as vagas da própria empresa em qualquer status (`OPEN`, `PAUSED`, `CLOSED`), com o status de
+  cada uma, título, cidade/UF, descrição e competências, e o nome da empresa no cabeçalho. Não há botão de criar,
+  editar ou excluir vaga. Usa `listEnterpriseVacanciesForRecruiter` e `getOwnEnterpriseName`; o 404 com id vira uma
+  mensagem genérica. Sem CNPJ, sem `enterpriseId` e sem vagas de outras empresas (#21).
 - Tela de candidatos do recrutador no front (`pages/recruiterCandidates.ts`), na rota `#/recruiter-candidates`. Sem
   match, o candidato aparece como "Candidato #N", só com formação, descrição e competências. Com match com a empresa,
   aparecem nome, e-mail e só as vagas da empresa com match (título e status). A tela escolhe entre anônimo e revelado

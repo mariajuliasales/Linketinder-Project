@@ -819,7 +819,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** sem CNPJ e sem vagas de outras empresas.
 - **Depende de:** T28
 - **Commit sugerido:** `feat(recrutador): add read-only enterprise vacancies page for recruiter`
-- [ ] Concluída
+- [x] Concluída
 
 ### T32 — Perfil do recrutador
 - **Camada:** front-end
