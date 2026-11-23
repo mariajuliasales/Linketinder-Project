@@ -862,14 +862,15 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Como validar:** `npm run build`. Manual como Sandubinha:
   - "Backend Spring" mostra Pastelsoft;
   - "Full Stack" aparece sem empresa;
-  - pausar a "Full Stack" como TechSolutions → ela some da lista principal e continua em "Minhas curtidas" como
-    `PAUSED`, sem empresa, e é possível descurtir;
+  - "Vagas abertas" aparece acima de "Minhas curtidas";
+  - pausar a "Full Stack" como TechSolutions → ela some da lista principal e continua em "Minhas curtidas", onde o
+    status aparece como *Pausada* (`PAUSED` no backend), sem empresa, e é possível descurtir;
   - candidato sem curtidas → mensagem de lista vazia;
   - inspecionar o DOM: nenhum dado de recrutador nem indicação de ter sido curtido.
 - **Anonimato:** a vaga sem match não tem nome, e-mail, CNPJ nem `enterpriseId` na tela ou nos atributos.
 - **Depende de:** T28
 - **Commit sugerido:** `feat(recrutador): add vacancy likes and "minhas curtidas" section for candidates`
-- [ ] Concluída
+- [x] Concluída
 
 ### T35 — Home e cadastro público
 - **Camada:** front-end

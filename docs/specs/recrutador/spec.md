@@ -174,6 +174,9 @@ Os 404 usam o formato padrão do projeto, "`<Entidade>` com ID `<id>` não exist
   - dados da empresa: só o que a seção 2.4 e a tabela 4.2 já liberam, ou seja, nome e e-mail da empresa **só na vaga
     com match**. Sem match, nenhum dado da empresa;
   - a lista principal da tela continua só com as vagas `OPEN` (AGENTS.md › Validações existentes);
+  - ordem na tela: primeiro a seção "Vagas abertas" (lista principal), logo abaixo a seção "Minhas curtidas";
+  - o status aparece em português, como nas outras telas: *Aberta*, *Pausada* e *Fechada* (`OPEN`, `PAUSED` e
+    `CLOSED` no back-end);
   - no back-end, o controller de curtidas oferece a mesma lista (sem rota na API, seção 6.4), com o DTO de vaga com
     match da tabela 4.2.
 

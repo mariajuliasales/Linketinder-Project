@@ -9,6 +9,12 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Curtidas na tela de vagas do candidato no front (`pages/vacancies.ts`). A seção "Vagas abertas" mostra só vagas
+  `OPEN`, com o botão curtir/descurtir. Logo abaixo, a seção "Minhas curtidas" lista as vagas curtidas em qualquer
+  status (*Aberta*, *Pausada*, *Fechada*), com o botão de descurtir e, só na vaga com match, nome e e-mail da empresa.
+  Sem curtidas, mostra uma mensagem de lista vazia. O 404 com id vira uma mensagem genérica, o `id` da vaga fica só no
+  closure do botão e nenhum dado de recrutador aparece. `listOpenVacancies` foi mantida em `services/vacancies.ts`
+  porque `services/stats.ts` ainda a usa (#21).
 - Tela "Meu perfil" do recrutador no front (`pages/recruiterProfile.ts`), na rota `#/recruiter-profile`, com link
   na navbar do recrutador. Mostra nome, e-mail, área e o nome da empresa só para leitura, e edita a descrição e a senha
   por `updateOwnProfile`: senha vazia mantém a atual e senha com menos de 6 caracteres mostra o erro do serviço. Não
