@@ -174,6 +174,8 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Home do front (`pages/home.ts`): o passo "Dê match" perde o selo "em breve". O cadastro público
+  (`pages/register.ts`) continua só com candidato e empresa, sem mudança (#21).
 - Tela de candidatos da empresa no front (`pages/candidates.ts`): passa a usar `listCandidateCardsForEnterprise()`
   (T28). Sem match, o candidato continua como "Candidato #N"; com match com a empresa, a linha mostra nome, e-mail e o
   selo "Match". A tela não tem botão de curtir (CA36) e escolhe entre anônimo e revelado só por `candidate.reveal`

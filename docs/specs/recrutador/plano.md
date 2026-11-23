@@ -883,7 +883,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** não se aplica.
 - **Depende de:** T34
 - **Commit sugerido:** `feat(recrutador): enable match step on home page`
-- [ ] Concluída
+- [x] Concluída
 
 ---
 
