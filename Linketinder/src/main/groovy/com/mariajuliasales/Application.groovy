@@ -56,7 +56,8 @@ final class Application {
 
 		PersonValidator personValidator = new PersonValidator()
 		CandidateService candidateService = new CandidateService(candidateDAO, new CandidateValidator(personValidator))
-		EnterpriseService enterpriseService = new EnterpriseService(enterpriseDAO, new EnterpriseValidator(personValidator))
+		EnterpriseService enterpriseService = new EnterpriseService(
+				enterpriseDAO, new EnterpriseValidator(personValidator), recruiterDAO, database)
 		VacancyService vacancyService = new VacancyService(vacancyDAO, new VacancyValidator())
 		CompetenceService competenceService = new CompetenceService(competenceDAO, new CompetenceValidator())
 		RecruiterLikeService recruiterLikeService = new RecruiterLikeService(

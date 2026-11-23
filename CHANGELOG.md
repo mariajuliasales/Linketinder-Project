@@ -221,6 +221,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 - Front: o login e a checagem de e-mail duplicado (`isEmailInUse`) passam a ignorar espaços nas pontas, além de
   maiúsculas, ao comparar e-mails (`auth.ts#normalizeEmail`) (#21).
+- Excluir uma empresa no back-end deixava órfãs as `person` dos recrutadores dela (tipo `RECRUITER` sem `recruiter`),
+  com o e-mail preso (409 em novo cadastro). Agora o `EnterpriseService#delete` apaga, numa só transação, primeiro as
+  pessoas dos recrutadores e depois a empresa, com rollback em caso de erro. Para isso, o `PersonDAO` ganhou o
+  `delete(Connection, int)`, por exceção autorizada na T41; o `delete(int)` não mudou. Encontrado na regressão da
+  T38 (spec 2.1, CA53) (#21).
 
 ## [0.1.0] - 2026-11-04
 

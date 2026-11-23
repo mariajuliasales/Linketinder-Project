@@ -88,6 +88,13 @@ abstract class PersonDAO<T extends AbstractPerson> implements PersonRepository<T
 		}
 	}
 
+	/** Igual ao delete(int), mas na transação de quem chama: não abre, não confirma nem fecha a conexão. */
+	@Override
+	boolean delete(Connection connection, int id) {
+		Integer personId = findPersonId(connection, id)
+		personId != null && SqlExecutor.update(connection, 'DELETE FROM person WHERE id = ?', [personId]) > 0
+	}
+
 	protected void loadRelations(Connection connection, T person) {
 		person.competences = competenceLinkDAO.findLinked(connection, competenceLink, person.id)
 	}

@@ -2,8 +2,10 @@ package com.mariajuliasales.api
 
 import com.mariajuliasales.controller.EnterpriseController
 import com.mariajuliasales.controller.VacancyController
+import com.mariajuliasales.dao.ConnectionManager
 import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.repository.EnterpriseRepository
+import com.mariajuliasales.repository.RecruiterRepository
 import com.mariajuliasales.repository.VacancyRepository
 import com.mariajuliasales.service.EnterpriseService
 import com.mariajuliasales.service.VacancyService
@@ -28,7 +30,8 @@ class VacancyServletSpec extends Specification {
 	VacancyRepository vacancyRepository = Mock()
 	VacancyServlet servlet = new VacancyServlet(new VacancyController(
 	new VacancyService(vacancyRepository, new VacancyValidator()),
-	new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator()))))
+	new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator()),
+	Stub(RecruiterRepository), Stub(ConnectionManager))))
 
 	StringWriter body = new StringWriter()
 	HttpServletResponse response = Mock()

@@ -144,6 +144,15 @@ Estado atual do código que a feature toca:
 
 Os 404 usam o formato padrão do projeto, "`<Entidade>` com ID `<id>` não existe" (`EntityNotFoundException`).
 
+**Exclusão da empresa** (encontrado na regressão da T38)
+
+- Ao excluir uma empresa, o serviço remove, na mesma transação, as `person` dos recrutadores dela (o que apaga
+  `recruiter` e `recruiter_like` em cascata). As `enterprise_like` e os matches da empresa já somem pela cascata da
+  própria empresa.
+- Ordem: primeiro remove as `person` dos recrutadores da empresa, depois remove a empresa. Se a cascata de
+  `enterprise` apagasse `recruiter` antes, os ids das `person` se perderiam.
+- Nenhuma `person` do tipo `RECRUITER` pode ficar sem `recruiter`.
+
 **Bug conhecido: e-mail único diferencia maiúsculas**
 
 - O `UNIQUE` de `person.email` diferencia maiúsculas, mas o `PersonDAO#findByEmail` busca com `lower()`. O banco aceita
@@ -543,6 +552,9 @@ O recrutador não tem endereço. Ao candidato, **nenhum** dado do recrutador é 
   mantém a atual, e senha com menos de 6 caracteres → 400. A regra é coberta por teste Spock no `RecruiterService` e
   verificada manualmente no front. **Não existe** rota na API para editar recrutador.
 - **CA18** — Dado a tela pública de cadastro do front, quando ela é aberta, então só há as opções candidato e empresa.
+- **CA53** — Dado a empresa E com o recrutador R1, quando E é excluída, então não sobra `person` de R1, e o e-mail de R1
+  pode ser cadastrado de novo. Se a exclusão de E falhar, as `person` dos recrutadores continuam existindo. Uma empresa
+  sem recrutadores é excluída como antes.
 
 ### Escopo de atuação do recrutador
 

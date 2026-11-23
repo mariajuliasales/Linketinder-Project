@@ -1,5 +1,6 @@
 package com.mariajuliasales.controller
 
+import com.mariajuliasales.dao.ConnectionManager
 import com.mariajuliasales.dto.request.VacancyRequest
 import com.mariajuliasales.dto.response.VacancyAnonymousResponse
 import com.mariajuliasales.exception.EntityNotFoundException
@@ -7,6 +8,7 @@ import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.model.VacancyStatus
 import com.mariajuliasales.repository.EnterpriseRepository
+import com.mariajuliasales.repository.RecruiterRepository
 import com.mariajuliasales.repository.VacancyRepository
 import com.mariajuliasales.service.EnterpriseService
 import com.mariajuliasales.service.VacancyService
@@ -24,7 +26,8 @@ class VacancyControllerSpec extends Specification {
 	EnterpriseRepository enterpriseRepository = Mock()
 	VacancyController controller = new VacancyController(
 	new VacancyService(vacancyRepository, new VacancyValidator()),
-	new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator())))
+	new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator()),
+	Stub(RecruiterRepository), Stub(ConnectionManager)))
 
 	private static VacancyRequest request(String status = null) {
 		new VacancyRequest('Desenvolvedor Groovy', 'Desenvolvimento de APIs', 'Recife', 'PE', status, ['Groovy'])

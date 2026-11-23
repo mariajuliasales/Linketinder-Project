@@ -1017,6 +1017,28 @@ projeto não tem testes de integração (AGENTS.md 12).
 - **Anonimato:** as telas antigas continuam com "Candidato #N" e vagas sem empresa.
 - **Depende de:** T37
 - **Commit sugerido:** `docs(recrutador): record regression check of existing flows`
+
+#### Resultado da regressão (2026-11-23)
+
+Banco descartável `linketinder_t38` (`reset+migrar`, removido no fim), API com `./gradlew runApi` e console com
+`./gradlew run`, ambos apontados para ele por `DB_URL`.
+
+| Fluxo | Resultado | Observação |
+|---|---|---|
+| `reset+migrar` | ok | Sem erro |
+| Curtidas e matches do seed | ok | 5 `candidate_like`, 4 `enterprise_like`, 3 matches (Lucas × Full Stack, Gabriel × Cientista de Dados, Sandubinha × Backend Spring) |
+| Contas antigas (senha `123456`) | ok no banco | `crypt('123456', password_hash)` confere para a candidata, a empresa e a recrutadora de teste. Login pela tela: pendente (front) |
+| `POST /api/candidates` | ok | 201 no válido (senha em bcrypt, resposta sem senha); 409 em e-mail e CPF repetidos; 400 em CPF inválido |
+| `POST /api/enterprises` | ok | 201 no válido; 409 em e-mail e CNPJ repetidos |
+| `POST /api/vacancies` | ok | 201 com `OPEN` e `PAUSED`; 404 com empresa inexistente; 400 sem competência |
+| Pausa e exclusão de vaga (console) | ok | Pausar a vaga 1 manteve o match dela (B17); excluir a vaga 10 funcionou |
+| Menu do console | ok | `main/view/` sem diferença em relação à `main`; listagens continuam anônimas e não mostram recrutadores |
+| Exclusão de candidato (console) | ok | — |
+| Exclusão de empresa (console) | **falha** | A empresa, a `recruiter` e as `enterprise_like` somem em cascata, mas a `person` do recrutador fica órfã (tipo `RECRUITER` sem `recruiter`), e o e-mail dele fica preso (409). Vira a **T41** (spec 2.1, "Exclusão da empresa"; CA53) |
+| Fluxos no front | pendente | Sem navegador automatizável na sessão do agente. Roteiro manual, com o `localStorage` limpo: cadastro de candidato e empresa; publicar, pausar e excluir vaga; login das contas antigas e exclusão de conta; 3 matches do seed; telas com "Candidato #N" e vagas sem empresa |
+
+`./gradlew test` passou.
+
 - [ ] Concluída
 
 ### T39 — Varredura de anonimato
@@ -1054,6 +1076,46 @@ projeto não tem testes de integração (AGENTS.md 12).
 - **Depende de:** T19
 - **Commit sugerido:** `perf(dao): load person competences in a single query`
 - [ ] Concluída
+
+### T41 — Exclusão da empresa remove as pessoas dos recrutadores
+- **Camada:** back-end
+- **O que será feito:** ao excluir uma empresa, o serviço remove, na mesma transação, primeiro as `person` dos
+  recrutadores dela (cascata para `recruiter` e `recruiter_like`) e depois a empresa (spec 2.1, "Exclusão da
+  empresa"). Encontrado na T38: hoje a `person` do recrutador fica órfã e o e-mail fica preso.
+- **Antes de implementar:** confirmar que o `RecruiterRepository` e o `EnterpriseDAO` participam da mesma
+  transação/conexão no `EnterpriseService#delete`. Se isso exigir mudar o `EnterpriseDAO`, parar e registrar em
+  "Dúvidas e desvios", sem alterar nada.
+  - **Conferido em 2026-11-23 (leitura do código, na T38): exige.** O `EnterpriseService` herda o `delete(int)` do
+    `CrudService`, que chama `EnterpriseDAO#delete(int)` (herdado de `PersonDAO`). Esse método abre a própria
+    transação com `connectionManager.withTransaction`, e o `DatabaseConnection#withConnection` cria uma conexão nova a
+    cada chamada. Já o `RecruiterRepository#delete(Connection, int)` recebe a conexão de fora. Sem um
+    `delete(Connection, int)` no `PersonDAO`/`EnterpriseDAO`, as duas exclusões não ficam na mesma transação. As
+    regras do plano protegem o comportamento do `PersonDAO` e do `EnterpriseDAO`, então **a tarefa está bloqueada
+    até a desenvolvedora decidir o caminho**.
+  - **Desbloqueio (2026-11-23): autorizado o caminho (a).** Exceção às regras de proteção do plano, válida só para
+    esta tarefa: o `PersonDAO` ganha o método `delete(Connection connection, int id)`, que usa a conexão recebida e
+    não abre, não confirma nem fecha a transação. O `delete(int)` existente e os outros métodos do `PersonDAO` e do
+    `EnterpriseDAO` não mudam.
+- **Arquivos envolvidos:**
+  - `main/dao/PersonDAO.groovy`: novo `delete(Connection, int)` (exceção acima);
+  - `main/repository/PersonRepository.groovy`: contrato do novo método, para o serviço usá-lo pela interface;
+  - `main/service/EnterpriseService.groovy`: `delete(int)` sobrescrito, com a ordem da spec 2.1;
+  - `main/Application.groovy`: injeta o `RecruiterDAO` e o `ConnectionManager` no `EnterpriseService`;
+  - `test/service/EnterpriseServiceSpec.groovy`: testes novos e os dois testes de exclusão antigos trocados;
+  - `test/api/EnterpriseServletSpec.groovy`, `test/api/VacancyServletSpec.groovy`,
+    `test/controller/EnterpriseControllerSpec.groovy`, `test/controller/VacancyControllerSpec.groovy`: só o construtor
+    novo do `EnterpriseService`, com `Stub()`.
+- **Critérios de aceite cobertos:** CA53
+- **Testes Spock:**
+  - CA53: empresa com R1 excluída → nenhuma `person` de R1 sobra, e o e-mail de R1 pode ser cadastrado de novo;
+  - rollback: se a exclusão da empresa falhar, as `person` dos recrutadores continuam existindo;
+  - empresa sem recrutadores: a exclusão funciona como antes.
+- **Como validar:** `./gradlew test`; num banco descartável, excluir pelo console uma empresa com recrutador e conferir
+  que não sobra `person` do tipo `RECRUITER` sem `recruiter`.
+- **Anonimato:** não expõe dados; a exclusão não devolve dados do recrutador.
+- **Depende de:** T38
+- **Commit sugerido:** `fix(recrutador): delete recruiter persons when the enterprise is deleted`
+- [x] Concluída
 
 ---
 
@@ -1113,8 +1175,9 @@ projeto não tem testes de integração (AGENTS.md 12).
 | CA50 | T23, T37 |
 | CA51 | T22, T24, T35 |
 | CA52 | T17, T20, T28, T34, T39 |
+| CA53 | T41 |
 
-Todos os critérios CA01–CA52 estão cobertos.
+Todos os critérios CA01–CA53 estão cobertos.
 
 ---
 
