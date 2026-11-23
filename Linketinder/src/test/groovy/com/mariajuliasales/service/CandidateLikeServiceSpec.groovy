@@ -36,6 +36,25 @@ class CandidateLikeServiceSpec extends Specification {
 	CandidateLikeService service = new CandidateLikeService(connectionManager, candidateRepository, vacancyRepository,
 	likeRepository, matchRepository)
 
+	def setup() {
+		likeRepository.lockEnterprise(_, ENTERPRISE) >> true
+	}
+
+	def "like should fail with 404 without revealing the enterprise and save nothing when the enterprise no longer exists at lock time"() {
+		given:
+		vacancyRepository.findById(VACANCY) >> openVacancy()
+
+		when:
+		service.like(CANDIDATE, VACANCY)
+
+		then:
+		1 * likeRepository.lockEnterprise(connection, ENTERPRISE) >> false
+		EntityNotFoundException exception = thrown()
+		exception.message == "Vaga com ID ${VACANCY} não existe"
+		0 * likeRepository._
+		0 * matchRepository._
+	}
+
 	def "like should lock the enterprise, then the vacancy, and save the like without match when no recruiter of the enterprise likes the candidate (B6)"() {
 		given:
 		vacancyRepository.findById(VACANCY) >> openVacancy()

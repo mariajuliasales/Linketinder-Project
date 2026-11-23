@@ -9,6 +9,8 @@ import java.sql.ResultSet
 /**
  * SQL dos matches. Cada método é uma única instrução e usa a Connection da transação do serviço.
  * O INSERT usa ON CONFLICT DO NOTHING. As consultas selecionam só ids e status.
+ * likedVacanciesOfEnterprise trava as vagas lidas (FOR SHARE OF v): até o fim da transação, elas não mudam de status
+ * nem somem. Ordem das travas: sempre enterprise antes de vacancy.
  */
 class MatchDAO implements MatchRepository {
 
@@ -18,7 +20,8 @@ class MatchDAO implements MatchRepository {
             JOIN vacancy v ON v.id = cl.vacancy_id
             WHERE cl.candidate_id = ?
               AND v.enterprise_id = ?
-            ORDER BY cl.vacancy_id'''
+            ORDER BY cl.vacancy_id
+            FOR SHARE OF v'''
 	private static final String INSERT_MATCH =
 	'INSERT INTO vacancy_match (candidate_id, vacancy_id) VALUES (?, ?) ON CONFLICT DO NOTHING'
 	private static final String DELETE_MATCHES_OF_CANDIDATE_WITH_ENTERPRISE = '''

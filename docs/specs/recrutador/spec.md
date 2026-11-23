@@ -247,7 +247,7 @@ Os 404 usam o formato padrão do projeto, "`<Entidade>` com ID `<id>` não exist
 | B7 | R1 curte C de novo | Idempotente, sem erro e sem mudança | CA31 |
 | B8 | R1 descurte C que não curtia | Idempotente, sem erro e sem mudança | CA31 |
 | B9 | R1 curte C com o mesmo CPF de R1 | 400, nada salvo | CA32 |
-| B10 | R1 curte candidato inexistente | 404 "Candidato com ID `<id>` não existe" | CA31 |
+| B10 | R1 curte candidato inexistente, ou o recrutador não existe | 404 "Candidato com ID `<id>` não existe"; recrutador inexistente → 404 "Recrutador com ID `<id>` não existe" | CA31 |
 | B11 | C já tem match com V1 (E) e curte V4 (E, `OPEN`) | Curtida + match (C, V4) na mesma transação (2.2) | CA22 |
 | B12 | C descurte V1 com match | Só o match (C, V1) some. `enterprise_like(E, C)` e os outros matches continuam | CA25 |
 | B13 | E tem recrutadores de áreas TI e RH; R(RH) curte C, que curtiu vaga de TI | Match criado. A área não filtra | CA33 |

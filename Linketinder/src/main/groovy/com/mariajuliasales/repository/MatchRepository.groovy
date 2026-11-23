@@ -8,12 +8,17 @@ import java.sql.Connection
  * Matches (vacancy_match). Todos os métodos rodam dentro da transação aberta pelo serviço, que decide quando um match
  * nasce ou cai (invariante enterprise_like ⇔ recruiter_like, curtida do candidato). Nenhuma regra fica no SQL.
  * Os métodos devolvem só ids e contagens, nunca dados pessoais.
+ *
+ * Todos os métodos precisam ser chamados dentro da transação do serviço, com a empresa E já travada
+ * (LikeRepository#lockEnterprise). Ordem das travas: sempre enterprise antes de vacancy; nenhum fluxo trava vacancy e
+ * depois enterprise.
  */
 interface MatchRepository {
 
 	/**
 	 * Vagas da empresa que o candidato curtiu, em qualquer status: id da vaga → status, em ordem crescente de id.
 	 * Não filtra OPEN: quem decide com quais vagas o match nasce é o serviço.
+	 * Trava as vagas lidas (FOR SHARE OF v): até o fim da transação, elas não mudam de status nem somem.
 	 */
 	Map<Integer, VacancyStatus> likedVacanciesOfEnterprise(Connection connection, int candidateId, int enterpriseId)
 

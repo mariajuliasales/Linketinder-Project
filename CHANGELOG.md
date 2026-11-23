@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `RecruiterLikeService`: curtida do recrutador em candidato, numa transação que trava a empresa e mantém a invariante
+  `enterprise_like` ⇔ `recruiter_like`: confere se a empresa já curtia o candidato antes de gravar a curtida e, na
+  primeira curtida da empresa, grava o `enterprise_like` e cria o match só com as vagas `OPEN` que o candidato curtiu.
+  Bloqueia a autocurtida pelo CPF (400, sem o CPF na mensagem) e devolve 404 para recrutador ou candidato inexistente.
+  `MatchDAO#likedVacanciesOfEnterprise` passa a travar as vagas lidas com `FOR SHARE OF v` (#21).
 - `CandidateLikeService`: curtida do candidato em vaga, numa transação que trava a empresa e relê o status da vaga com
   `FOR SHARE` (só vagas `OPEN`; 404 para candidato ou vaga inexistente), cria o match quando a empresa já curte o
   candidato, e descurtida idempotente em qualquer status. `LikeRepository` ganha `lockVacancyStatus` (#21).
@@ -44,6 +49,8 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- `CandidateLikeService` deixa de ignorar o retorno do `lockEnterprise`: se a empresa da vaga não existe mais, responde
+  404 "Vaga com ID `<id>` não existe", sem revelar a empresa (#21).
 - Spec e plano do Recrutador: os 404 passam a usar o formato padrão do projeto, "`<Entidade>` com ID `<id>` não
   existe" (`EntityNotFoundException`), em vez de mensagens próprias; a edição de perfil de um recrutador inexistente
   responde 404.

@@ -304,7 +304,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** os métodos devolvem só ids e status, nunca nome, e-mail, CPF ou CNPJ.
 - **Depende de:** T05
 - **Commit sugerido:** `feat(recrutador): add match repository`
-- [ ] Concluída
+- [x] Concluída
 
 ### T12 — Curtida do candidato
 - **Camada:** back-end
@@ -341,25 +341,38 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** não se aplica (sem saída para terceiros).
 - **Depende de:** T10, T11
 - **Commit sugerido:** `feat(recrutador): add candidate like service with match on open vacancies`
-- [ ] Concluída
+- [x] Concluída
 
 ### T13 — Curtida do recrutador
 - **Camada:** back-end
-- **O que será feito:** `RecruiterLikeService.like(recruiterId, candidateId)`, numa transação. A ordem é: recrutador e
-  candidato existem (404 "Candidato com ID `<id>` não existe") → mesmo CPF (400 "Você não pode curtir o seu próprio perfil de
-  candidato.") → trava E → grava a `recruiter_like` (idempotente) → se é a primeira de E, grava `enterprise_like` e
-  cria o match com cada vaga **`OPEN`** de E que C curtiu.
+- **O que será feito:** `RecruiterLikeService.like(recruiterId, candidateId)`, numa transação. A ordem é:
+  - antes da transação: recrutador existe (404 "Recrutador com ID `<id>` não existe") → candidato existe (404
+    "Candidato com ID `<id>` não existe") → mesmo CPF, comparando só os dígitos (400 "Você não pode curtir o seu
+    próprio perfil de candidato.");
+  - na transação: trava E (se `lockEnterprise` indica que E não existe, 404 "Recrutador com ID `<id>` não existe",
+    porque o recrutador cai junto em cascata) → confere `enterpriseLikeExists(E, C)` **antes** de gravar a curtida do
+    recrutador atual → grava a `recruiter_like` (idempotente) → se E ainda não curtia C (primeira de E), grava
+    `enterprise_like` e cria o match com cada vaga **`OPEN`** de E que C curtiu.
+
+  **Consistência com T12:** o `CandidateLikeService` também deixa de ignorar o retorno do `lockEnterprise`: se E não
+  existe, 404 "Vaga com ID `<id>` não existe" (a vaga cai junto em cascata; a mensagem não revela E).
 
   **Nota (concorrência):** a trava de E não protege o status das vagas (`VacancyDAO#update` não trava E). Por isso o
   `likedVacanciesOfEnterprise` do `MatchDAO` ganha `FOR SHARE OF v`, implementado nesta tarefa: as vagas lidas não
   mudam de status nem somem até o fim da transação. Ordem das travas: sempre enterprise antes de vacancy. Nenhum
-  fluxo pode travar vacancy e depois enterprise.
+  fluxo pode travar vacancy e depois enterprise. O Javadoc do `MatchRepository` registra que os métodos são chamados
+  dentro da transação, com E já travada.
 - **Arquivos envolvidos:** criar `main/service/RecruiterLikeService.groovy`, `test/service/RecruiterLikeServiceSpec.groovy`;
-  alterar `main/dao/MatchDAO.groovy` (`FOR SHARE OF v`)
+  alterar `main/dao/MatchDAO.groovy` (`FOR SHARE OF v`), `main/repository/MatchRepository.groovy` (Javadoc),
+  `main/service/CandidateLikeService.groovy` e `test/service/CandidateLikeServiceSpec.groovy` (404 quando E não
+  existe no `lockEnterprise`)
 - **Critérios de aceite cobertos:** CA27 (B1), CA28 (B2), CA29 (B3), CA31 (B7, B10), CA32 (B9), CA33 (B13), CA34 (B14),
   CA35 (B16)
 - **Como validar:** `./gradlew test --tests '*RecruiterLikeServiceSpec'`, com um caso por B1, B2, B3, B7, B9, B10, B13,
-  B14 e B16:
+  B14 e B16, mais:
+  - primeira curtida de E: `enterpriseLikeExists` antes de `insertRecruiterLike` → cria os matches;
+  - `lockEnterprise` devolve `false` → 404, nada salvo (também no `CandidateLikeServiceSpec`, com a mensagem da vaga);
+  - recrutador inexistente → 404 "Recrutador com ID `<id>` não existe";
   - B9: CPF com e sem máscara, e `0 *` em todo `insert`;
   - B14: `insertMatch` só com V2. O filtro `OPEN` é do serviço, com o `likedVacanciesOfEnterprise` mockado:
     - o mock devolve uma vaga `OPEN` → o match é criado;
@@ -372,7 +385,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** a mensagem de B9 não traz o CPF.
 - **Depende de:** T12
 - **Commit sugerido:** `feat(recrutador): add recruiter like service keeping enterprise_like invariant`
-- [ ] Concluída
+- [x] Concluída
 
 ### T14 — Descurtida do recrutador
 - **Camada:** back-end

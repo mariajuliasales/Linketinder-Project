@@ -41,7 +41,7 @@ class CandidateLikeService {
 
 	/**
 	 * Antes da transação: candidato existe (404) e a vaga é carregada só para descobrir a empresa E (404).
-	 * Na transação: trava E → relê o status da vaga com FOR SHARE (404 se sumiu, 400 se não está OPEN) → grava a
+	 * Na transação: trava E (404 da vaga se E sumiu, porque a vaga cai junto em cascata; a mensagem não revela E) → relê o status da vaga com FOR SHARE (404 se sumiu, 400 se não está OPEN) → grava a
 	 * curtida (idempotente) → se E já curte o candidato, cria o match. Qualquer erro desfaz tudo.
 	 */
 	void like(int candidateId, int vacancyId) {
@@ -50,7 +50,9 @@ class CandidateLikeService {
 		int enterpriseId = vacancy.enterprise.id
 
 		connectionManager.withTransaction { Connection connection ->
-			likeRepository.lockEnterprise(connection, enterpriseId)
+			if (!likeRepository.lockEnterprise(connection, enterpriseId)) {
+				throw new EntityNotFoundException(VACANCY, vacancyId)
+			}
 			VacancyStatus status = likeRepository.lockVacancyStatus(connection, vacancyId)
 			if (status == null) {
 				throw new EntityNotFoundException(VACANCY, vacancyId)
