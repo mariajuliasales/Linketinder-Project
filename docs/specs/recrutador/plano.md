@@ -773,7 +773,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** a tabela mostra só nome, e-mail, área e descrição; o `id` fica só no closure do botão de remover.
 - **Depende de:** T27
 - **Commit sugerido:** `feat(recrutador): add enterprise recruiters page`
-- [ ] Concluída
+- [x] Concluída
 
 ### T30 — Tela de candidatos do recrutador
 - **Camada:** front-end

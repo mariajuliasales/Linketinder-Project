@@ -7,7 +7,11 @@ type NavLink = [route: string, text: string];
 
 const LINKS_BY_TYPE: Record<Account['type'], NavLink[]> = {
   CANDIDATE: [[ROUTES.vacancies, 'Vagas']],
-  ENTERPRISE: [[ROUTES.candidates, 'Candidatos'], [ROUTES.myVacancies, 'Minhas vagas']],
+  ENTERPRISE: [
+    [ROUTES.candidates, 'Candidatos'],
+    [ROUTES.myVacancies, 'Minhas vagas'],
+    [ROUTES.recruiters, 'Recrutadores'],
+  ],
   RECRUITER: [[ROUTES.recruiterCandidates, 'Candidatos'], [ROUTES.recruiterVacancies, 'Vagas da empresa']],
 };
 

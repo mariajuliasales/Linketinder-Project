@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Tela "Recrutadores" da empresa no front (`pages/recruiters.ts`), com rota `#/recruiters` e link na navbar da
+  empresa. A empresa lista os próprios recrutadores numa tabela com nome, e-mail, área e descrição, cadastra novos
+  (formulário com nome, e-mail, senha, área num `select`, CPF, nascimento e descrição) e remove com confirmação. Os
+  erros 400 e 409 do serviço aparecem como vêm; o 404 com id vira uma mensagem genérica. CPF, nascimento e senha não
+  chegam à tela, e o `id` fica só no closure do botão de remover, fora de `data-*` e `aria-*` (#21).
 - Serviços de revelação após o match no front, sem tela que os use ainda. Em `services/candidates.ts`:
   `listCandidateCardsForRecruiter()` e `listCandidateCardsForEnterprise()`, sem parâmetro. O recrutador ou a empresa
   vêm da sessão, e a empresa da revelação vem deles, nunca do chamador. Lançam erro sem sessão do tipo certo, e
