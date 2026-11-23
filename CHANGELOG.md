@@ -9,6 +9,8 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Migration `002_create_recruiter.sql`: cria `recruitment_area` (com as 7 áreas), `recruiter` e `recruiter_like`, e
+  torna `person.address_id` opcional só para o recrutador, com o `CHECK person_address_required_check`.
 - Migration `001_add_recruiter_person_type.sql`, a primeira de `Database/migrations/`: adiciona o valor `RECRUITER`
   ao ENUM `person_type`, sozinha e fora de transação, para que a próxima migration possa usá-lo.
 - Plano de implementação da feature Recrutador (`docs/specs/recrutador/plano.md`).

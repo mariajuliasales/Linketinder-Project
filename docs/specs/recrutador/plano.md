@@ -149,7 +149,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** não se aplica (só estrutura).
 - **Depende de:** T01, T02
 - **Commit sugerido:** `feat(recrutador): create recruiter, recruitment_area and recruiter_like tables`
-- [ ] Concluída
+- [x] Concluída
 
 ### T04 — Recrutadores de exemplo e backfill das curtidas
 - **Camada:** banco
