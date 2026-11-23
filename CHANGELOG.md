@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `RecruiterService#removeByEnterprise`: remoção do recrutador pela própria empresa, numa transação que trava a
+  empresa. Para cada candidato curtido pelo recrutador, apaga a `recruiter_like` e aplica a regra de "saiu o último"
+  (`RecruiterLikeService#releaseRecruiterLike`); depois apaga `recruiter` e `person`. Responde 404 "Recrutador com ID
+  `<id>` não existe" tanto para id inexistente quanto para recrutador de outra empresa, sem apagar nada. O construtor do
+  `RecruiterService` passa a receber `ConnectionManager`, `LikeRepository` e `RecruiterLikeService` (#21).
 - `RecruiterLikeService#unlike`: descurtida idempotente do recrutador, numa transação que trava a empresa. Apaga a
   `recruiter_like` e, se nenhum outro recrutador da empresa curte o candidato, apaga o `enterprise_like` e os matches
   do candidato com todas as vagas da empresa. Responde 404 se o recrutador ou a empresa não existem; candidato

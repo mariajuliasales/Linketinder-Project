@@ -1,13 +1,21 @@
 package com.mariajuliasales.service
 
+import com.mariajuliasales.dao.ConnectionFactory
+import com.mariajuliasales.dao.ConnectionManager
+import com.mariajuliasales.dao.DatabaseConnection
 import com.mariajuliasales.exception.DuplicateEntityException
 import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.exception.ValidationException
 import com.mariajuliasales.model.Recruiter
+import com.mariajuliasales.repository.CandidateRepository
 import com.mariajuliasales.repository.EnterpriseRepository
+import com.mariajuliasales.repository.LikeRepository
+import com.mariajuliasales.repository.MatchRepository
 import com.mariajuliasales.repository.RecruiterRepository
 import com.mariajuliasales.service.validator.RecruiterValidator
 import spock.lang.Specification
+
+import java.sql.Connection
 
 import static com.mariajuliasales.fixture.TestData.validCandidate
 import static com.mariajuliasales.fixture.TestData.validEnterprise
@@ -15,9 +23,28 @@ import static com.mariajuliasales.fixture.TestData.validRecruiter
 
 class RecruiterServiceSpec extends Specification {
 
+	static final int R1 = 7
+	static final int ENTERPRISE = 3
+	static final int OTHER_ENTERPRISE = 4
+	static final int CANDIDATE_C = 5
+	static final int CANDIDATE_D = 6
+
+	Connection connection = Stub()
+	ConnectionManager connectionManager = Stub() {
+		withTransaction(_) >> { Closure work -> work(connection) }
+	}
 	RecruiterRepository recruiterRepository = Mock()
 	EnterpriseRepository enterpriseRepository = Mock()
-	RecruiterService recruiterService = new RecruiterService(recruiterRepository, enterpriseRepository, new RecruiterValidator())
+	LikeRepository likeRepository = Mock()
+	MatchRepository matchRepository = Mock()
+	RecruiterService recruiterService = createService(connectionManager)
+
+	private RecruiterService createService(ConnectionManager manager) {
+		RecruiterLikeService recruiterLikeService = new RecruiterLikeService(manager, recruiterRepository,
+		Stub(CandidateRepository), likeRepository, matchRepository)
+		new RecruiterService(recruiterRepository, enterpriseRepository, new RecruiterValidator(), manager,
+		likeRepository, recruiterLikeService)
+	}
 
 	def "create should save a valid recruiter linked to the enterprise"() {
 		given:
@@ -203,5 +230,154 @@ class RecruiterServiceSpec extends Specification {
 		1 * recruiterRepository.updateProfile(5, "Nova descrição", "") >> false
 		EntityNotFoundException exception = thrown()
 		exception.message == "Recrutador com ID 5 não existe"
+	}
+
+	def "removeByEnterprise should fail with 404 and delete nothing when the recruiter belongs to another enterprise (CA14)"() {
+		when:
+		recruiterService.removeByEnterprise(OTHER_ENTERPRISE, R1)
+
+		then:
+		1 * recruiterRepository.findByIdAndEnterprise(R1, OTHER_ENTERPRISE) >> null
+		EntityNotFoundException exception = thrown()
+		exception.message == "Recrutador com ID 7 não existe"
+		0 * recruiterRepository.delete(*_)
+		0 * likeRepository._
+		0 * matchRepository._
+	}
+
+	def "removeByEnterprise should fail with 404 and delete nothing when the recruiter does not exist"() {
+		when:
+		recruiterService.removeByEnterprise(ENTERPRISE, 99)
+
+		then:
+		1 * recruiterRepository.findByIdAndEnterprise(99, ENTERPRISE) >> null
+		EntityNotFoundException exception = thrown()
+		exception.message == "Recrutador com ID 99 não existe"
+		0 * recruiterRepository.delete(*_)
+		0 * likeRepository._
+		0 * matchRepository._
+	}
+
+	def "removeByEnterprise should fail with 404 and delete nothing when the enterprise no longer exists at lock time"() {
+		given:
+		recruiterRepository.findByIdAndEnterprise(R1, ENTERPRISE) >> validRecruiter(id: R1, enterpriseId: ENTERPRISE)
+
+		when:
+		recruiterService.removeByEnterprise(ENTERPRISE, R1)
+
+		then:
+		1 * likeRepository.lockEnterprise(connection, ENTERPRISE) >> false
+		EntityNotFoundException exception = thrown()
+		exception.message == "Recrutador com ID 7 não existe"
+		0 * recruiterRepository.delete(*_)
+		0 * likeRepository._
+		0 * matchRepository._
+	}
+
+	def "removeByEnterprise of the only recruiter liking the candidate should delete the enterprise like and the matches (CA15, B15)"() {
+		given:
+		recruiterRepository.findByIdAndEnterprise(R1, ENTERPRISE) >> validRecruiter(id: R1, enterpriseId: ENTERPRISE)
+
+		when:
+		recruiterService.removeByEnterprise(ENTERPRISE, R1)
+
+		then:
+		1 * likeRepository.lockEnterprise(connection, ENTERPRISE) >> true
+
+		then:
+		1 * likeRepository.candidatesLikedBy(connection, R1) >> [CANDIDATE_C]
+
+		then:
+		1 * likeRepository.deleteRecruiterLike(connection, R1, CANDIDATE_C) >> true
+
+		then:
+		1 * likeRepository.otherRecruiterOfEnterpriseLikes(connection, R1, CANDIDATE_C) >> false
+
+		then:
+		1 * likeRepository.deleteEnterpriseLike(connection, ENTERPRISE, CANDIDATE_C) >> true
+		1 * matchRepository.deleteMatchesOfCandidateWithEnterprise(connection, CANDIDATE_C, ENTERPRISE) >> 1
+
+		then:
+		1 * recruiterRepository.delete(connection, R1) >> true
+		0 * likeRepository._
+		0 * matchRepository._
+	}
+
+	def "removeByEnterprise should keep the enterprise like and the matches when another recruiter still likes the candidate (CA16)"() {
+		given:
+		recruiterRepository.findByIdAndEnterprise(R1, ENTERPRISE) >> validRecruiter(id: R1, enterpriseId: ENTERPRISE)
+		likeRepository.lockEnterprise(connection, ENTERPRISE) >> true
+		likeRepository.candidatesLikedBy(connection, R1) >> [CANDIDATE_C]
+
+		when:
+		recruiterService.removeByEnterprise(ENTERPRISE, R1)
+
+		then:
+		1 * likeRepository.deleteRecruiterLike(connection, R1, CANDIDATE_C) >> true
+		1 * likeRepository.otherRecruiterOfEnterpriseLikes(connection, R1, CANDIDATE_C) >> true
+		0 * likeRepository.deleteEnterpriseLike(*_)
+		0 * matchRepository._
+		1 * recruiterRepository.delete(connection, R1) >> true
+	}
+
+	def "removeByEnterprise should delete only the enterprise like and matches of the candidate no other recruiter likes"() {
+		given:
+		recruiterRepository.findByIdAndEnterprise(R1, ENTERPRISE) >> validRecruiter(id: R1, enterpriseId: ENTERPRISE)
+		likeRepository.lockEnterprise(connection, ENTERPRISE) >> true
+		likeRepository.candidatesLikedBy(connection, R1) >> [CANDIDATE_C, CANDIDATE_D]
+		likeRepository.deleteRecruiterLike(connection, R1, _) >> true
+		likeRepository.otherRecruiterOfEnterpriseLikes(connection, R1, CANDIDATE_C) >> false
+		likeRepository.otherRecruiterOfEnterpriseLikes(connection, R1, CANDIDATE_D) >> true
+
+		when:
+		recruiterService.removeByEnterprise(ENTERPRISE, R1)
+
+		then:
+		1 * likeRepository.deleteEnterpriseLike(connection, ENTERPRISE, CANDIDATE_C) >> true
+		1 * matchRepository.deleteMatchesOfCandidateWithEnterprise(connection, CANDIDATE_C, ENTERPRISE) >> 1
+		0 * likeRepository.deleteEnterpriseLike(connection, ENTERPRISE, CANDIDATE_D)
+		0 * matchRepository.deleteMatchesOfCandidateWithEnterprise(connection, CANDIDATE_D, _)
+		1 * recruiterRepository.delete(connection, R1) >> true
+	}
+
+	def "removeByEnterprise should delete the recruiter without touching enterprise likes when he liked no candidate"() {
+		given:
+		recruiterRepository.findByIdAndEnterprise(R1, ENTERPRISE) >> validRecruiter(id: R1, enterpriseId: ENTERPRISE)
+		likeRepository.lockEnterprise(connection, ENTERPRISE) >> true
+		likeRepository.candidatesLikedBy(connection, R1) >> []
+
+		when:
+		recruiterService.removeByEnterprise(ENTERPRISE, R1)
+
+		then:
+		0 * likeRepository.deleteRecruiterLike(*_)
+		0 * likeRepository.deleteEnterpriseLike(*_)
+		0 * matchRepository._
+		1 * recruiterRepository.delete(connection, R1) >> true
+	}
+
+	def "removeByEnterprise should roll back the like and match deletions when deleting the recruiter fails"() {
+		given:
+		Connection realConnection = Mock()
+		ConnectionFactory connectionFactory = Stub() {
+			createConnection() >> realConnection
+		}
+		RecruiterService transactionalService = createService(new DatabaseConnection(connectionFactory))
+		recruiterRepository.findByIdAndEnterprise(R1, ENTERPRISE) >> validRecruiter(id: R1, enterpriseId: ENTERPRISE)
+		likeRepository.lockEnterprise(realConnection, ENTERPRISE) >> true
+		likeRepository.candidatesLikedBy(realConnection, R1) >> [CANDIDATE_C]
+		likeRepository.deleteRecruiterLike(realConnection, R1, CANDIDATE_C) >> true
+		likeRepository.otherRecruiterOfEnterpriseLikes(realConnection, R1, CANDIDATE_C) >> false
+
+		when:
+		transactionalService.removeByEnterprise(ENTERPRISE, R1)
+
+		then:
+		1 * likeRepository.deleteEnterpriseLike(realConnection, ENTERPRISE, CANDIDATE_C) >> true
+		1 * matchRepository.deleteMatchesOfCandidateWithEnterprise(realConnection, CANDIDATE_C, ENTERPRISE) >> 1
+		1 * recruiterRepository.delete(realConnection, R1) >> { throw new IllegalStateException('falha ao apagar') }
+		thrown(IllegalStateException)
+		0 * realConnection.commit()
+		1 * realConnection.rollback()
 	}
 }

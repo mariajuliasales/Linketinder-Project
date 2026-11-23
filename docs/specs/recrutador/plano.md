@@ -424,7 +424,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** o 404 não distingue "não existe" de "é de outra empresa".
 - **Depende de:** T14
 - **Commit sugerido:** `feat(recrutador): remove recruiter and recompute enterprise likes`
-- [ ] Concluída
+- [x] Concluída
 
 ### T16 — DTOs e mapper do recrutador
 - **Camada:** back-end

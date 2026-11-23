@@ -1,12 +1,16 @@
 package com.mariajuliasales.service
 
+import com.mariajuliasales.dao.ConnectionManager
 import com.mariajuliasales.exception.DuplicateEntityException
 import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.model.Recruiter
 import com.mariajuliasales.repository.EnterpriseRepository
+import com.mariajuliasales.repository.LikeRepository
 import com.mariajuliasales.repository.RecruiterRepository
 import com.mariajuliasales.service.validator.Validator
 import com.mariajuliasales.util.PasswordValidator
+
+import java.sql.Connection
 
 import static com.mariajuliasales.exception.EntityNotFoundException.requireFound
 import static com.mariajuliasales.service.validator.Validation.require
@@ -23,12 +27,19 @@ class RecruiterService {
 	private final RecruiterRepository recruiterRepository
 	private final EnterpriseRepository enterpriseRepository
 	private final Validator<Recruiter> validator
+	private final ConnectionManager connectionManager
+	private final LikeRepository likeRepository
+	private final RecruiterLikeService recruiterLikeService
 
 	RecruiterService(RecruiterRepository recruiterRepository, EnterpriseRepository enterpriseRepository,
-			Validator<Recruiter> validator) {
+			Validator<Recruiter> validator, ConnectionManager connectionManager, LikeRepository likeRepository,
+			RecruiterLikeService recruiterLikeService) {
 		this.recruiterRepository = recruiterRepository
 		this.enterpriseRepository = enterpriseRepository
 		this.validator = validator
+		this.connectionManager = connectionManager
+		this.likeRepository = likeRepository
+		this.recruiterLikeService = recruiterLikeService
 	}
 
 	/** Valida, confere a empresa (404) e o e-mail entre todas as pessoas (409), e só então grava. */
@@ -57,5 +68,27 @@ class RecruiterService {
 		}
 		recruiter.description = description
 		recruiter
+	}
+
+	/**
+	 * Remoção do recrutador pela própria empresa. 404 "Recrutador com ID <id> não existe" quando ele não existe ou é
+	 * de outra empresa: a resposta não distingue os dois casos. Numa transação: trava E (404 se E sumiu, porque o
+	 * recrutador cai junto em cascata) → para cada candidato C curtido por ele, apaga a recruiter_like e aplica a regra
+	 * de "saiu o último" (RecruiterLikeService#releaseRecruiterLike) → apaga recruiter e person. Qualquer erro desfaz tudo.
+	 */
+	void removeByEnterprise(int enterpriseId, int recruiterId) {
+		requireFound(recruiterRepository.findByIdAndEnterprise(recruiterId, enterpriseId), RECRUITER, recruiterId)
+
+		connectionManager.withTransaction { Connection connection ->
+			if (!likeRepository.lockEnterprise(connection, enterpriseId)) {
+				throw new EntityNotFoundException(RECRUITER, recruiterId)
+			}
+			likeRepository.candidatesLikedBy(connection, recruiterId).each { int candidateId ->
+				recruiterLikeService.releaseRecruiterLike(connection, enterpriseId, recruiterId, candidateId)
+			}
+			if (!recruiterRepository.delete(connection, recruiterId)) {
+				throw new EntityNotFoundException(RECRUITER, recruiterId)
+			}
+		}
 	}
 }
