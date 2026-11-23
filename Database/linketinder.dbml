@@ -42,6 +42,7 @@ Table address {
 Enum person_type {
   CANDIDATE
   ENTERPRISE
+  RECRUITER
 }
 
 Table person {
@@ -51,11 +52,15 @@ Table person {
   email         varchar(150) [not null, unique]
   description   text
   password_hash varchar(255) [not null]
-  address_id    integer      [not null]
+  address_id    integer      [note: 'Obrigatório para CANDIDATE e ENTERPRISE; nulo só para RECRUITER (person_address_required_check)']
   created_at    timestamp    [not null, default: `now()`]
 
   indexes {
     (id, type) [unique]
+  }
+
+  checks {
+    `type = 'RECRUITER' OR address_id IS NOT NULL` [name: 'person_address_required_check']
   }
 }
 
@@ -81,6 +86,39 @@ Table enterprise {
   checks {
     `person_type = 'ENTERPRISE'` [name: 'enterprise_person_type_check']
   }
+}
+
+// ---------------------------------------------------------------------------
+// Recrutador
+
+Table recruitment_area {
+  id   integer     [pk, increment]
+  name varchar(50) [not null, unique, note: 'TI, RH, Marketing, Segurança da Informação, Financeiro, Comercial, Operações']
+
+  Note: 'Lista fixa de áreas de recrutamento.'
+}
+
+Table recruiter {
+  id            integer     [pk, increment]
+  person_id     integer     [not null, unique]
+  person_type   person_type [not null, default: 'RECRUITER']
+  enterprise_id integer     [not null]
+  area_id       integer     [not null]
+  cpf           char(11)    [not null, unique, note: 'recruiter_cpf_key: único entre recrutadores; pode repetir o CPF de um candidato']
+  birth_date    date        [not null]
+
+  indexes {
+    enterprise_id
+  }
+
+  checks {
+    `person_type = 'RECRUITER'` [name: 'recruiter_person_type_check']
+  }
+
+  Note: '''
+  Especialização de person, vinculada a uma única empresa (N:1). Não tem endereço nem competências.
+  Nunca é exposto ao candidato.
+  '''
 }
 
 // ---------------------------------------------------------------------------
@@ -160,6 +198,25 @@ Table enterprise_like {
     (enterprise_id, candidate_id) [pk, note: 'Uma curtida por candidato']
     candidate_id
   }
+
+  Note: '''
+  Curtida consolidada da empresa, mantida pelo serviço:
+  enterprise_like(E, C) existe se e somente se existe pelo menos uma recruiter_like(R, C) com R recrutador de E.
+  Invariante garantida pelo serviço, não pelo banco (não há FK nem trigger entre as duas tabelas).
+  '''
+}
+
+Table recruiter_like {
+  recruiter_id integer   [not null]
+  candidate_id integer   [not null]
+  created_at   timestamp [not null, default: `now()`]
+
+  indexes {
+    (recruiter_id, candidate_id) [pk, note: 'Uma curtida por recrutador/candidato']
+    candidate_id
+  }
+
+  Note: 'Curtida do recrutador em candidato. Ver a invariante em enterprise_like.'
 }
 
 Table vacancy_match {
@@ -176,11 +233,15 @@ Table vacancy_match {
 
 Ref: candidate.(person_id, person_type) > person.(id, type) [delete: cascade]
 Ref: enterprise.(person_id, person_type) > person.(id, type) [delete: cascade]
+Ref: recruiter.(person_id, person_type) > person.(id, type) [delete: cascade]
 
 Ref: person.address_id > address.id [delete: restrict]
 
 Ref: vacancy.enterprise_id > enterprise.id [delete: cascade]
 Ref: vacancy.address_id > address.id [delete: restrict]
+
+Ref: recruiter.enterprise_id > enterprise.id [delete: cascade]
+Ref: recruiter.area_id > recruitment_area.id [delete: restrict]
 
 Ref: candidate_competence.candidate_id > candidate.id [delete: cascade]
 Ref: candidate_competence.competence_id > competence.id [delete: restrict]
@@ -194,6 +255,8 @@ Ref: candidate_like.candidate_id > candidate.id [delete: cascade]
 Ref: candidate_like.vacancy_id > vacancy.id [delete: cascade]
 Ref: enterprise_like.enterprise_id > enterprise.id [delete: cascade]
 Ref: enterprise_like.candidate_id > candidate.id [delete: cascade]
+Ref: recruiter_like.recruiter_id > recruiter.id [delete: cascade]
+Ref: recruiter_like.candidate_id > candidate.id [delete: cascade]
 
 // Match depende da curtida do candidato na vaga
 Ref: vacancy_match.(candidate_id, vacancy_id) > candidate_like.(candidate_id, vacancy_id) [delete: cascade]

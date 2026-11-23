@@ -183,7 +183,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** não se aplica.
 - **Depende de:** T04
 - **Commit sugerido:** `docs(recrutador): add recruiter tables to DBML model`
-- [ ] Concluída
+- [x] Concluída
 
 ---
 

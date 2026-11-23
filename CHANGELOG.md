@@ -27,6 +27,9 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- `Database/linketinder.dbml`: valor `RECRUITER` em `person_type`, `person.address_id` opcional com o
+  `CHECK person_address_required_check`, tabelas `recruitment_area`, `recruiter` e `recruiter_like` e nota da
+  invariante `enterprise_like` ⇔ `recruiter_like`, garantida pelo serviço.
 - `AGENTS.md`: a seção 4.2 passa a documentar o reset oficial do banco (`dropdb` + `createdb` + `schema.sql` +
   `seed.sql` + migrations) e avisa que reaplicar só o `schema.sql` sobre um banco migrado não é suportado. A seção 10
   passa a apontar para a spec aprovada do Recrutador.
