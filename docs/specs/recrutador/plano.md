@@ -1060,7 +1060,49 @@ Banco descartável `linketinder_t38` (`reset+migrar`, removido no fim), API com 
 - **Anonimato:** é o objetivo da tarefa.
 - **Depende de:** T38
 - **Commit sugerido:** `docs(recrutador): record anonymity sweep`
-- [ ] Concluída
+
+#### Resultado da varredura (2026-11-23)
+
+Leitura do diff `main...HEAD` em `Linketinder/src/main` e `Frontend/src`. Sem banco nem navegador na sessão do agente.
+
+| Ponto (spec 4.6) | Resultado | Observação |
+|---|---|---|
+| `grep -rn "println\|password_hash\|SELECT \*"` nos arquivos novos | ok | Os dois `println` (`ApiMain`, `Application`) já existiam na `main` e não imprimem entidades. `password_hash` só aparece em `INSERT`/`UPDATE` com `crypt(...)` e num comentário. Nenhum `SELECT *` |
+| JOINs novos | ok | `RecruiterDAO#SELECT_RECRUITER` lê `cpf` e `birth_date` (usados na regra do próprio CPF), sem `password_hash`; não saem do `RecruiterMapper`. `MatchDAO` e `LikeDAO` não fazem JOIN com `person`. Nome e e-mail da empresa vêm de `EnterpriseRepository#findById` e só são passados ao `LikedVacancyView` na vaga com match (`MatchQueryService`); a entidade `Enterprise` (com CNPJ) não sai do serviço |
+| Entidade serializada | ok | `RecruiterServlet` só envia `RecruiterResponse`. `CandidateMatchResponse`, `MatchedVacancyResponse` e `VacancyMatchResponse` são montados campo a campo no `MatchMapper`; `VacancyMatchResponse` sem `enterpriseId` |
+| Logs novos | ok | Nenhum `println`, `printStackTrace` ou log novo. `Recruiter` sem `@ToString`/`@Canonical` |
+| JSON do `POST /api/recruiters` | ok | `RecruiterResponse(id, name, email, area, description)`, sem CPF, nascimento, idade e senha. Teste: `RecruiterMapperSpec` "response should not contain sensitive fields" |
+| Testes de ausência | ok | `MatchMapperSpec`: "candidate without match should have only anonymous data", "candidate response should never contain sensitive data, with or without match", "vacancy without match should not reveal the enterprise", "vacancy response should never contain sensitive components" |
+| Tipos recebidos por `pages/` | ok | Só `CandidateCard` (`reveal` opcional), `LikedVacancyCard` (`enterprise` opcional), `VacancyCard`, `RecruiterSummary` e o próprio usuário logado (`Recruiter`, `Candidate`, `Enterprise`, vindos do guard). Nenhuma tela recebe `Recruiter` de terceiros nem `recruiter_like` de outros |
+| Atributos e hover cards (código) | ok | `aria-label`/`aria-pressed` usam só "Candidato #N", título da vaga e o nome do recrutador (na tela da própria empresa). Nenhum `data-*`. `innerHTML` só com cabeçalhos fixos. Hover card da vaga sem match mostra "revelados após o match". CPF e nascimento só aparecem como campos do formulário de cadastro de recrutador, que é recriado vazio após o envio |
+| Mensagens de erro | ok | As telas novas ou alteradas (`recruiters`, `recruiterCandidates`, `recruiterVacancies`, `recruiterProfile`, `vacancies`) trocam o 404 com id interno por mensagem genérica. 409 de e-mail no cadastro de recrutador: limitação aceita (AGENTS.md 12) |
+| Candidato sem dado de recrutador | ok | `pages/vacancies.ts` não importa nada de `services/recruiters` nem de recrutador; `LikedVacancyCard` só tem nome e e-mail da empresa |
+| DOM, hover cards e `aria-*`/`data-*` no DevTools (candidato, empresa e recrutador, antes e depois do match) | **pendente (manual)** | Sem navegador automatizável na sessão do agente. Roteiro para a desenvolvedora abaixo |
+
+Roteiro manual (com o `localStorage` limpo, senha `123456`):
+1. Candidata `mariajuliasales@gmail.com`, tela de vagas: nenhuma vaga ou hover card mostra empresa, `enterpriseId` ou
+   recrutador; em "Minhas curtidas", nome e e-mail da empresa só na vaga com match (CA42, CA43, CA52).
+2. Recrutador de exemplo, tela de candidatos: sem match, só "Candidato #N", formação, descrição e competências; com
+   match, só nome, e-mail e vagas com match; nenhuma indicação de outros recrutadores (CA40, CA41, CA45).
+3. Empresa `contato@techsolutions.com.br`, tela "Recrutadores": só os dela, com nome, e-mail, área e descrição, sem CPF
+   nem nascimento no DOM ou nos atributos (CA46).
+4. Em cada tela, inspecionar no DevTools o DOM, os hover cards e os atributos `aria-*`/`data-*`.
+
+Checklist "Princípio do Anonimato" (skill, Etapa 6):
+- [x] Dados de terceiros antes do match saem apenas por DTOs `*AnonymousResponse` ou tipos anônimos do front, montados
+  campo a campo (ou pelos DTOs/tipos de match, com os campos revelados nulos ou ausentes)
+- [x] Nenhuma entidade é serializada inteira
+- [x] Consultas com JOIN não levam dados identificáveis até a resposta
+- [x] Senha, CPF, CNPJ, data de nascimento, idade e endereço completo nunca aparecem para outro usuário
+- [x] Depois do match, só os dados permitidos no AGENTS.md são revelados
+- [x] Há testes que verificam a AUSÊNCIA de dados sensíveis nas respostas
+- [x] Logs e mensagens de erro não expõem dados pessoais
+- [ ] Front: verificação manual no navegador e no `localStorage` (pendente: roteiro acima)
+- [ ] DER regenerado (manual, pela desenvolvedora)
+
+`./gradlew test` e `npm run build` passaram.
+
+- [x] Concluída
 
 ### T40 — N+1 de competências no `PersonDAO`
 - **Camada:** back-end (fora do escopo da feature Recrutador; não bloqueia as outras tarefas)

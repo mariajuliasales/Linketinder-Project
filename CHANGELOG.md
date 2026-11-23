@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Varredura de anonimato do Recrutador registrada em `docs/specs/recrutador/plano.md`, na T39, ponto a ponto da spec
+  4.6: SQL novo sem `password_hash` nem `SELECT *`, nenhuma entidade serializada, nenhum log novo, `POST
+  /api/recruiters` sem CPF e nascimento, `pages/` só com tipos anônimos, revelados ou `RecruiterSummary`, e nenhum dado
+  de recrutador para o candidato. Nenhum vazamento encontrado. A conferência no navegador (DevTools) ficou como roteiro
+  manual, e o DER segue aberto para a desenvolvedora (#21).
 - Conferência dos critérios de aceite do Recrutador (CA01–CA52) registrada em `docs/specs/recrutador/plano.md`, na
   T37: tabela com critério, atendimento, teste que cobre e observação. Nenhum critério ficou com "não". CA35 é parcial
   por falta de teste de integração com o banco; CA18, CA36, CA43, CA45 e CA51, só de front, esperam a verificação no
