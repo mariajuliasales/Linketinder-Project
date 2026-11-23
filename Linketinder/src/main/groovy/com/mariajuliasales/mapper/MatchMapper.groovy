@@ -4,6 +4,7 @@ import com.mariajuliasales.dto.response.CandidateMatchResponse
 import com.mariajuliasales.dto.response.MatchedVacancyResponse
 import com.mariajuliasales.dto.response.VacancyMatchResponse
 import com.mariajuliasales.model.Candidate
+import com.mariajuliasales.model.CandidateMatches
 import com.mariajuliasales.model.Vacancy
 
 /**
@@ -42,6 +43,14 @@ final class MatchMapper {
 				hasMatch ? candidate.email : null,
 				matched
 				)
+	}
+
+	/** Repassa para toCandidateMatchResponse(Candidate, List<Vacancy>): vagas vazias = sem match. */
+	static CandidateMatchResponse toCandidateMatchResponse(CandidateMatches matches) {
+		if (matches == null) {
+			return null
+		}
+		toCandidateMatchResponse(matches.candidate(), matches.vacancies())
 	}
 
 	/** @param matched true só quando existe vacancy_match entre o candidato e esta vaga. */

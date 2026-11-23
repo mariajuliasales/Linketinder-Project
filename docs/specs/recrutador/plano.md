@@ -494,24 +494,62 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 
 ### T19 — Curtidas e visão de candidatos para recrutador e empresa
 - **Camada:** back-end
-- **O que será feito:** `LikeController` com `candidateLikes`/`candidateUnlikes` e `recruiterLikes`/`recruiterUnlikes`,
-  mais `listCandidatesForRecruiter(recruiterId)` e `listCandidatesForEnterprise(enterpriseId)` →
-  `List<CandidateMatchResponse>`. Nova consulta no `MatchRepository`: `matchedVacanciesOf(candidateId, enterpriseId)`
-  (id, título, status), filtrada por `vacancy_match`. Registro em `Controllers` e `Application`.
-- **Arquivos envolvidos:** criar `main/controller/LikeController.groovy`, `test/controller/LikeControllerSpec.groovy`;
-  alterar `main/repository/MatchRepository.groovy`, `main/dao/MatchDAO.groovy`, `main/controller/Controllers.groovy`,
-  `main/Application.groovy`
+- **O que será feito:**
+  - `LikeController` com `candidateLikes`/`candidateUnlikes` (delegam ao `CandidateLikeService`) e
+    `recruiterLikes`/`recruiterUnlikes` (delegam ao `RecruiterLikeService`), mais `listCandidatesForRecruiter(recruiterId)`
+    e `listCandidatesForEnterprise(enterpriseId)` → `List<CandidateMatchResponse>`, que delegam ao novo
+    `MatchQueryService`. O controller monta a resposta com `MatchMapper.toCandidateMatchResponse(CandidateMatches)`.
+  - **As duas listas são de revelação:** trazem só os candidatos com ao menos um `vacancy_match` com vaga de E, já
+    revelados. Candidato sem match com E fica fora delas e continua só em `CandidateController.findAll`
+    (`CandidateAnonymousResponse`). Empresa sem matches → lista vazia.
+  - `MatchQueryService` (AGENTS.md › 9.1: controller → service → repository) recebe `ConnectionManager`,
+    `CandidateRepository`, `EnterpriseRepository`, `RecruiterRepository` e `MatchRepository`:
+    - `candidatesWithMatchesForEnterprise(enterpriseId)` → 404 se a empresa não existe;
+    - `candidatesWithMatchesForRecruiter(recruiterId)` → 404 se o recrutador não existe (resolvido pelo
+      `RecruiterRepository`, sem `findById` público no `RecruiterService`), depois usa a empresa dele;
+    - devolve `List<CandidateMatches>`, candidatos por `id` crescente e as vagas de cada um por `id` crescente;
+    - leitura com `withConnection`, sem transação e sem trava;
+    - sem consulta dentro de laço no código da T19: as vagas com match saem numa consulta e os candidatos em outra.
+      O `loadRelations` por candidato do `PersonDAO#findWhere` continua (limitação conhecida, ver T40).
+    - A T20 (`listLikedVacancies`) estende este mesmo service.
+  - `main/model/CandidateMatches.groovy`: `record CandidateMatches(Candidate candidate, List<Vacancy> vacancies)`,
+    imutável (cópia imutável da lista de vagas).
+  - Nova consulta no `MatchRepository`: `matchedVacanciesByEnterprise(Connection, enterpriseId)` → vagas com match de E,
+    agrupadas por `candidate_id` (id, título e status), via JOIN de `vacancy_match` com `vacancy`, sem colunas de
+    `person`, com `ORDER BY vm.candidate_id, v.id`.
+  - Novo método `findAllByIds(Collection<Integer>)` no `CandidateRepository`/`CandidateDAO`: `WHERE candidate.id IN
+    (?, …)`, um `?` por id, ordem por `candidate.id`; coleção vazia → `[]` sem ir ao banco. **O `CandidateDAO` foi
+    alterado nesta tarefa com autorização explícita da desenvolvedora, só por acréscimo**, sem mudar o que já existe.
+    A consulta `IN (...)` **não tem teste com banco** (AGENTS.md 12); o comportamento é coberto no
+    `MatchQueryServiceSpec` com o repositório mockado, inclusive ids vazios.
+  - `MatchMapper` ganha a sobrecarga `toCandidateMatchResponse(CandidateMatches)`, que repassa ao método atual
+    (o `MatchMapperSpec` não muda). Service e controller usam só a versão nova.
+  - Registro em `Controllers` e `Application`.
+- **Arquivos envolvidos:**
+  - criar: `main/controller/LikeController.groovy`, `test/controller/LikeControllerSpec.groovy`,
+    `main/service/MatchQueryService.groovy`, `test/service/MatchQueryServiceSpec.groovy`,
+    `main/model/CandidateMatches.groovy`;
+  - alterar: `main/repository/MatchRepository.groovy`, `main/dao/MatchDAO.groovy`,
+    `main/repository/CandidateRepository.groovy`, `main/dao/CandidateDAO.groovy` (só acréscimo do `findAllByIds`),
+    `main/mapper/MatchMapper.groovy` (sobrecarga), `main/controller/Controllers.groovy`, `main/Application.groovy`.
 - **Critérios de aceite cobertos:** CA37, CA38, CA40, CA41
-- **Como validar:** `./gradlew test --tests '*LikeControllerSpec'`:
-  - candidato sem match com E → `name`/`email` nulos e `matchedVacancies` vazia;
+  - CA40: ausência do candidato sem match na lista de revelação (inclusive com curtida unilateral), mais o
+    `CandidateAnonymousResponse` que já existe;
+  - CA37 e CA41: lista de revelação com só as vagas com match;
+  - CA38: mesma lista, pela rota da empresa.
+- **Como validar:** `./gradlew test --tests '*LikeControllerSpec' --tests '*MatchQueryServiceSpec'`:
+  - candidato sem match com E não aparece na lista de revelação (continua só em `CandidateController.findAll`,
+    anônimo), inclusive com curtida unilateral (evidência do CA40);
   - com match só em V1 → só V1;
   - match com E1 não revela para E2;
-  - curtida sem match não aparece.
-- **Anonimato:** a consulta de vagas com match não seleciona colunas de `person`; nome e e-mail vêm do `Candidate` já
-  carregado, só quando há match.
+  - curtida sem match não aparece;
+  - ordenação por id, empresa sem matches → lista vazia, empresa ou recrutador inexistente → 404, recrutador resolve
+    para a própria empresa, ids vazios não chamam `findAllByIds`.
+- **Anonimato:** a consulta de vagas com match não seleciona colunas de `person`; nome e e-mail vêm do `Candidate`
+  carregado só para quem tem match.
 - **Depende de:** T14, T17
 - **Commit sugerido:** `feat(recrutador): add like controller and candidate reveal for recruiters and enterprises`
-- [ ] Concluída
+- [x] Concluída
 
 ### T20 — "Minhas curtidas" do candidato no back-end
 - **Camada:** back-end
@@ -519,8 +557,10 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   curtidas em qualquer status, e nome e e-mail da empresa só nas com match. Nova consulta no `LikeRepository`:
   `likedVacanciesOf(candidateId)`, com id da vaga e flag de match. Os dados da vaga vêm do `VacancyRepository`, e
   nome/e-mail da empresa só são lidos quando a flag de match é verdadeira.
+  O controller delega ao `MatchQueryService` (criado na T19), que ganha `listLikedVacancies(candidateId)`.
 - **Arquivos envolvidos:** alterar `main/controller/LikeController.groovy`, `test/controller/LikeControllerSpec.groovy`,
-  `main/repository/LikeRepository.groovy`, `main/dao/LikeDAO.groovy`
+  `main/repository/LikeRepository.groovy`, `main/dao/LikeDAO.groovy`,
+  `main/service/MatchQueryService.groovy`, `test/service/MatchQueryServiceSpec.groovy`
 - **Critérios de aceite cobertos:** CA39, CA42, CA52 (back)
 - **Como validar:** `./gradlew test --tests '*LikeControllerSpec'`: V1 com match tem `enterpriseName`/`enterpriseEmail`;
   V2 sem match (`PAUSED`) aparece com status e **sem** esses campos; nenhum item tem `enterpriseId` ou `cnpj`.
@@ -688,6 +728,8 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Camada:** front-end
 - **O que será feito:** página do recrutador com os candidatos: "Candidato #N" anônimo, botão curtir/descurtir (só da
   própria curtida) e, com match, nome, e-mail e a lista das vagas de E com match. Mensagem de erro da autocurtida.
+- **Junção das listas:** a tela junta a listagem anônima com a lista de revelação, por id; candidato presente na
+  revelação substitui o anônimo.
 - **Arquivos envolvidos:** criar `front/pages/recruiterCandidates.ts`; alterar `front/router.ts`
 - **Critérios de aceite cobertos:** CA27–CA34 (front), CA37, CA40, CA45
 - **Como validar:** `npm run build`. Manual como Juliana (TechSolutions):
@@ -733,6 +775,8 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Camada:** front-end
 - **O que será feito:** `pages/candidates.ts` passa a usar `CandidateCard`: sem botão de curtir; nome e e-mail só com
   match com a empresa.
+- **Junção das listas:** a tela junta a listagem anônima com a lista de revelação, por id; candidato presente na
+  revelação substitui o anônimo.
 - **Arquivos envolvidos:** alterar `front/pages/candidates.ts`
 - **Critérios de aceite cobertos:** CA36, CA38
 - **Como validar:** `npm run build`. Manual como `contato@techsolutions.com.br`: Lucas revelado, os demais anônimos; sem
@@ -850,6 +894,21 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** é o objetivo da tarefa.
 - **Depende de:** T38
 - **Commit sugerido:** `docs(recrutador): record anonymity sweep`
+- [ ] Concluída
+
+### T40 — N+1 de competências no `PersonDAO`
+- **Camada:** back-end (fora do escopo da feature Recrutador; não bloqueia as outras tarefas)
+- **O que será feito:** eliminar a consulta de competências por pessoa em `PersonDAO#findWhere`
+  (`Linketinder/src/main/groovy/com/mariajuliasales/dao/PersonDAO.groovy:104-111`, `loadRelations` dentro do laço),
+  carregando as competências de todas as pessoas da listagem numa única consulta. Registrada na T19, onde o
+  `findAllByIds` herda esse N+1.
+- **Arquivos envolvidos:** a definir na própria tarefa (`PersonDAO`, `CompetenceLinkDAO` e specs). Exige autorização,
+  porque o plano protege o comportamento do `PersonDAO`.
+- **Critérios de aceite cobertos:** nenhum (melhoria de desempenho)
+- **Como validar:** `./gradlew test`; listagens de candidatos e empresas com as mesmas competências de antes.
+- **Anonimato:** não se aplica (só carrega competências, que já são públicas).
+- **Depende de:** T19
+- **Commit sugerido:** `perf(dao): load person competences in a single query`
 - [ ] Concluída
 
 ---

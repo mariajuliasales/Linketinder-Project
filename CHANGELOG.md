@@ -9,6 +9,16 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `LikeController` e `MatchQueryService`: o controller expõe `candidateLikes`/`candidateUnlikes` e
+  `recruiterLikes`/`recruiterUnlikes` (delegam ao `CandidateLikeService` e ao `RecruiterLikeService`) e as listas de
+  revelação `listCandidatesForRecruiter` e `listCandidatesForEnterprise`, sem rota na API. As listas trazem só os
+  candidatos com match com a empresa, revelados (nome, e-mail e só as vagas com match), em ordem crescente de id;
+  candidato sem match, mesmo com curtida unilateral, fica fora e continua só na listagem anônima. Empresa ou recrutador
+  inexistente responde 404. O `MatchQueryService` lê com duas consultas (vagas com match e candidatos), sem transação
+  nem trava. Novos `MatchRepository#matchedVacanciesByEnterprise` (sem colunas de `person`),
+  `CandidateRepository#findAllByIds` (só acréscimo ao `CandidateDAO`), o record `CandidateMatches` e a sobrecarga
+  `MatchMapper#toCandidateMatchResponse(CandidateMatches)`. `Application#createControllers` passa a montar o
+  `CandidateLikeService`, o `MatchQueryService` e o `LikeController` (#21).
 - `RecruiterController` e rota `POST /api/recruiters`: a empresa cadastra um recrutador enviando `enterpriseId`
   (inteiro, obrigatório) e os dados do recrutador. Responde 201 com `Location` e `RecruiterResponse` (sem CPF,
   nascimento, idade nem senha); 400 para dados inválidos, 404 para empresa inexistente e 409 para e-mail ou CPF

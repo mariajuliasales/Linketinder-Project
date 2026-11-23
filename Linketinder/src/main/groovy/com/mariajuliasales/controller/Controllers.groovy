@@ -5,6 +5,7 @@ record Controllers(
 		EnterpriseController enterprises,
 		VacancyController vacancies,
 		CompetenceController competences,
-		RecruiterController recruiters
+		RecruiterController recruiters,
+		LikeController likes
 		) {
 		}

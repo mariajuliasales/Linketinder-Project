@@ -1,5 +1,6 @@
 package com.mariajuliasales.dao
 
+import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.model.VacancyStatus
 import com.mariajuliasales.repository.MatchRepository
 
@@ -8,7 +9,7 @@ import java.sql.ResultSet
 
 /**
  * SQL dos matches. Cada método é uma única instrução e usa a Connection da transação do serviço.
- * O INSERT usa ON CONFLICT DO NOTHING. As consultas selecionam só ids e status.
+ * O INSERT usa ON CONFLICT DO NOTHING. As consultas selecionam só ids, título e status, nunca colunas de person.
  * likedVacanciesOfEnterprise trava as vagas lidas (FOR SHARE OF v): até o fim da transação, elas não mudam de status
  * nem somem. Ordem das travas: sempre enterprise antes de vacancy.
  */
@@ -30,6 +31,12 @@ class MatchDAO implements MatchRepository {
             WHERE v.id = vm.vacancy_id
               AND vm.candidate_id = ?
               AND v.enterprise_id = ?'''
+	private static final String MATCHED_VACANCIES_BY_ENTERPRISE = '''
+            SELECT vm.candidate_id, v.id, v.title, v.status
+            FROM vacancy_match vm
+            JOIN vacancy v ON v.id = vm.vacancy_id
+            WHERE v.enterprise_id = ?
+            ORDER BY vm.candidate_id, v.id'''
 
 	@Override
 	Map<Integer, VacancyStatus> likedVacanciesOfEnterprise(Connection connection, int candidateId, int enterpriseId) {
@@ -48,5 +55,19 @@ class MatchDAO implements MatchRepository {
 	@Override
 	int deleteMatchesOfCandidateWithEnterprise(Connection connection, int candidateId, int enterpriseId) {
 		SqlExecutor.update(connection, DELETE_MATCHES_OF_CANDIDATE_WITH_ENTERPRISE, [candidateId, enterpriseId])
+	}
+
+	@Override
+	Map<Integer, List<Vacancy>> matchedVacanciesByEnterprise(Connection connection, int enterpriseId) {
+		Map<Integer, List<Vacancy>> vacanciesByCandidate = [:]
+		SqlExecutor.query(connection, MATCHED_VACANCIES_BY_ENTERPRISE, [enterpriseId]) { ResultSet row ->
+			Vacancy vacancy = new Vacancy(
+					id: row.getInt('id'),
+					title: row.getString('title'),
+					status: VacancyStatus.valueOf(row.getString('status'))
+					)
+			vacanciesByCandidate.computeIfAbsent(row.getInt('candidate_id')) { [] } << vacancy
+		}
+		vacanciesByCandidate
 	}
 }

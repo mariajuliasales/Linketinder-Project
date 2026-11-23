@@ -4,6 +4,7 @@ import com.mariajuliasales.controller.CandidateController
 import com.mariajuliasales.controller.CompetenceController
 import com.mariajuliasales.controller.Controllers
 import com.mariajuliasales.controller.EnterpriseController
+import com.mariajuliasales.controller.LikeController
 import com.mariajuliasales.controller.RecruiterController
 import com.mariajuliasales.controller.VacancyController
 import com.mariajuliasales.dao.CandidateDAO
@@ -18,9 +19,11 @@ import com.mariajuliasales.dao.LikeDAO
 import com.mariajuliasales.dao.MatchDAO
 import com.mariajuliasales.dao.RecruiterDAO
 import com.mariajuliasales.dao.VacancyDAO
+import com.mariajuliasales.service.CandidateLikeService
 import com.mariajuliasales.service.CandidateService
 import com.mariajuliasales.service.CompetenceService
 import com.mariajuliasales.service.EnterpriseService
+import com.mariajuliasales.service.MatchQueryService
 import com.mariajuliasales.service.RecruiterLikeService
 import com.mariajuliasales.service.RecruiterService
 import com.mariajuliasales.service.VacancyService
@@ -60,13 +63,18 @@ final class Application {
 				database, recruiterDAO, candidateDAO, likeDAO, matchDAO)
 		RecruiterService recruiterService = new RecruiterService(
 				recruiterDAO, enterpriseDAO, new RecruiterValidator(), database, likeDAO, recruiterLikeService)
+		CandidateLikeService candidateLikeService = new CandidateLikeService(
+				database, candidateDAO, vacancyDAO, likeDAO, matchDAO)
+		MatchQueryService matchQueryService = new MatchQueryService(
+				database, candidateDAO, enterpriseDAO, recruiterDAO, matchDAO)
 
 		new Controllers(
 				new CandidateController(candidateService),
 				new EnterpriseController(enterpriseService),
 				new VacancyController(vacancyService, enterpriseService),
 				new CompetenceController(competenceService),
-				new RecruiterController(recruiterService)
+				new RecruiterController(recruiterService),
+				new LikeController(candidateLikeService, recruiterLikeService, matchQueryService)
 				)
 	}
 }
