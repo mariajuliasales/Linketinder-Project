@@ -168,7 +168,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** o script não seleciona nem imprime dados (sem `RAISE NOTICE` com e-mail ou CPF).
 - **Depende de:** T03
 - **Commit sugerido:** `feat(recrutador): add example recruiters and backfill recruiter likes`
-- [ ] Concluída
+- [x] Concluída
 
 ### T05 — Modelo DBML atualizado
 - **Camada:** banco

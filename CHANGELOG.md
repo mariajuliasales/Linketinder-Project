@@ -9,6 +9,9 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Migration `003_insert_example_recruiters.sql`: 5 recrutadores de exemplo (senha `123456`, sem endereço) e backfill
+  das curtidas de empresa já existentes com a curtida do recrutador indicado, para que toda `enterprise_like` tenha uma
+  `recruiter_like` correspondente.
 - Migration `002_create_recruiter.sql`: cria `recruitment_area` (com as 7 áreas), `recruiter` e `recruiter_like`, e
   torna `person.address_id` opcional só para o recrutador, com o `CHECK person_address_required_check`.
 - Migration `001_add_recruiter_person_type.sql`, a primeira de `Database/migrations/`: adiciona o valor `RECRUITER`
