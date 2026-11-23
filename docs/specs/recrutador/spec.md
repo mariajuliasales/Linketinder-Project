@@ -159,9 +159,24 @@ Estado atual do código que a feature toca:
 - **Descurtir:**
   - o candidato pode remover a curtida em qualquer status da vaga;
   - o match `(C, V)` é apagado em cascata pelo banco (`vacancy_match_like_fkey`). No front, o serviço apaga o match.
+- **Minhas curtidas:**
+  - a tela de vagas do candidato ganha a seção "Minhas curtidas", com as vagas que **ele** curtiu, em **qualquer**
+    status (`OPEN`, `PAUSED`, `CLOSED`);
+  - cada vaga mostra os dados anônimos (título, descrição, cidade/UF, competências), o **status** e o botão de
+    descurtir;
+  - dados da empresa: só o que a seção 2.4 e a tabela 4.2 já liberam, ou seja, nome e e-mail da empresa **só na vaga
+    com match**. Sem match, nenhum dado da empresa;
+  - a lista principal da tela continua só com as vagas `OPEN` (AGENTS.md › Validações existentes);
+  - no back-end, o controller de curtidas oferece a mesma lista (sem rota na API, seção 6.4), com o DTO de vaga com
+    match da tabela 4.2.
 
 **Casos de borda**
 
+- **Minhas curtidas:**
+  - vaga curtida e depois pausada ou fechada → sai da lista principal, continua em "Minhas curtidas" com o novo status
+    e pode ser descurtida;
+  - candidato sem curtidas → a seção mostra uma mensagem de lista vazia;
+  - C tem match com V1 de E e curtiu V2 de E sem match → nome e e-mail da empresa só em V1 (2.4).
 - **Vaga:**
   - curtir vaga `PAUSED` ou `CLOSED` → 400. Nada é salvo e nenhum match é criado;
   - curtir vaga inexistente → 404 "Vaga não encontrada".
@@ -414,6 +429,7 @@ Referência: AGENTS.md › Princípio do Anonimato. Na dúvida, o dado não é e
 | **Qualquer dado de recrutador** (nome, e-mail, área, descrição, CPF, nascimento, existência) | ❌ | ❌ | nenhuma resposta ou tela para o candidato carrega recrutador |
 | Se foi curtido, e por quem | ❌ | ❌ (só vê que houve match na vaga) | idem |
 | Título, descrição, cidade/UF, status e competências da vaga | ✅ | ✅ | `VacancyAnonymousResponse` / `VacancyAnonymous` |
+| Vagas que o próprio candidato curtiu, em qualquer status (seção "Minhas curtidas") | ✅ só os dados anônimos e o status | ✅ e, só na vaga com match, nome e e-mail da empresa | DTO de vaga com match (back) / tipo revelado (front), montado campo a campo |
 | Nome da empresa dona da vaga | ❌ | ✅ só na vaga com match | DTO de vaga com match (back) / tipo revelado (front) |
 | E-mail da empresa | ❌ | ✅ só na vaga com match | idem |
 | `enterpriseId` / vínculo vaga → empresa | ❌ | ❌ (só nome e e-mail) | DTO sem `enterpriseId` |
@@ -537,6 +553,13 @@ O recrutador não tem endereço. Ao candidato, **nenhum** dado do recrutador é 
   outros matches de C com E continuam (B12).
 - **CA26** — Dado C tendo curtido V, com ou sem match, quando V é pausada ou fechada, então a curtida e o match que já
   existiam continuam (B17).
+- **CA52** — Dado C tendo curtido V1 de E (`OPEN`, com match) e V2 de E (sem match, depois pausada), quando C abre a
+  tela de vagas, então:
+  - a lista principal mostra só vagas `OPEN`, e V2 não aparece nela;
+  - a seção "Minhas curtidas" mostra V1 e V2, cada uma com o próprio status e o botão de descurtir;
+  - V1 mostra nome e e-mail da empresa;
+  - V2 **não** contém nome, e-mail, CNPJ, `enterpriseId` nem qualquer outro dado da empresa (tela, tipo passado a
+    `pages/` e atributos `aria-*`/`data-*`; no back, o DTO de V2 tem esses campos nulos ou ausentes).
 
 ### 2.3 Curtida do recrutador e match
 
@@ -640,7 +663,7 @@ O recrutador não tem endereço. Ao candidato, **nenhum** dado do recrutador é 
   - `pages/` e `navigation`/`router`: telas novas.
   - `pages/home.ts`: sai o "em breve" do passo "Dê match".
   - `pages/candidates.ts` e `pages/vacancies.ts`: revelação depois do match e botão de curtir só para recrutador e
-    candidato.
+    candidato. `pages/vacancies.ts` ganha a seção "Minhas curtidas" (2.2).
 - **Docs:**
   - `docs/api.md`: `POST /api/recruiters`.
   - `AGENTS.md`:
@@ -800,3 +823,4 @@ Pendências levantadas durante a escrita e a revisão da spec. Todas foram decid
 | 8 | decisão 5, demais validações (e-mail, 18+, senha, área de lista fixa) | 2.1, seção 8 linha 5 | Aprovada como está na spec |
 | 9 | decisão 6, recrutador sem endereço (`DROP NOT NULL` + `CHECK`) | 3.1, seção 8 linha 6 | Aprovada como está na spec |
 | 10 | preencher a coluna "Discutida com o Tutor?" de todas as linhas da seção 8 | seção 8 | Preenchida com "Não (revisada com assistente de IA)" em todas as linhas, com nota abaixo da tabela da seção 8 |
+| 11 | lacuna encontrada no planejamento: onde o candidato vê as vagas curtidas que não estão `OPEN` (para descurtir e ver o match) | 2.2, 4.2, 6.1, CA52 | Seção "Minhas curtidas" na tela de vagas, com vagas curtidas em qualquer status, status e botão de descurtir. Dados da empresa só os já liberados pela 4.2 (nome e e-mail, só na vaga com match). Lista principal continua só com `OPEN` |
