@@ -9,9 +9,12 @@ import com.mariajuliasales.repository.EnterpriseRepository
 import com.mariajuliasales.repository.LikeRepository
 import com.mariajuliasales.repository.MatchRepository
 import com.mariajuliasales.repository.RecruiterRepository
+import com.mariajuliasales.repository.VacancyRepository
 import com.mariajuliasales.service.RecruiterLikeService
 import com.mariajuliasales.service.RecruiterService
+import com.mariajuliasales.service.VacancyService
 import com.mariajuliasales.service.validator.RecruiterValidator
+import com.mariajuliasales.service.validator.VacancyValidator
 import groovy.json.JsonSlurper
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -35,7 +38,7 @@ class RecruiterServletSpec extends Specification {
 	RecruiterServlet servlet = new RecruiterServlet(new RecruiterController(new RecruiterService(recruiterRepository,
 	enterpriseRepository, new RecruiterValidator(), connectionManager, Stub(LikeRepository),
 	new RecruiterLikeService(connectionManager, recruiterRepository, Stub(CandidateRepository), Stub(LikeRepository),
-	Stub(MatchRepository)))))
+	Stub(MatchRepository))), new VacancyService(Stub(VacancyRepository), new VacancyValidator())))
 
 	StringWriter body = new StringWriter()
 	HttpServletResponse response = Stub() {

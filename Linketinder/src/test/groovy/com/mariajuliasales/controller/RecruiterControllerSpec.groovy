@@ -3,19 +3,24 @@ package com.mariajuliasales.controller
 import com.mariajuliasales.dao.ConnectionManager
 import com.mariajuliasales.dto.request.RecruiterRequest
 import com.mariajuliasales.dto.response.RecruiterResponse
+import com.mariajuliasales.dto.response.VacancyAnonymousResponse
 import com.mariajuliasales.exception.DuplicateEntityException
 import com.mariajuliasales.exception.EntityNotFoundException
 import com.mariajuliasales.exception.ValidationException
 import com.mariajuliasales.model.Recruiter
 import com.mariajuliasales.model.RecruitmentArea
+import com.mariajuliasales.model.VacancyStatus
 import com.mariajuliasales.repository.CandidateRepository
 import com.mariajuliasales.repository.EnterpriseRepository
 import com.mariajuliasales.repository.LikeRepository
 import com.mariajuliasales.repository.MatchRepository
 import com.mariajuliasales.repository.RecruiterRepository
+import com.mariajuliasales.repository.VacancyRepository
 import com.mariajuliasales.service.RecruiterLikeService
 import com.mariajuliasales.service.RecruiterService
+import com.mariajuliasales.service.VacancyService
 import com.mariajuliasales.service.validator.RecruiterValidator
+import com.mariajuliasales.service.validator.VacancyValidator
 import spock.lang.Specification
 
 import java.sql.Connection
@@ -23,6 +28,7 @@ import java.time.LocalDate
 
 import static com.mariajuliasales.fixture.TestData.validEnterprise
 import static com.mariajuliasales.fixture.TestData.validRecruiter
+import static com.mariajuliasales.fixture.TestData.validVacancy
 
 class RecruiterControllerSpec extends Specification {
 
@@ -35,10 +41,11 @@ class RecruiterControllerSpec extends Specification {
 	RecruiterRepository recruiterRepository = Mock()
 	EnterpriseRepository enterpriseRepository = Mock()
 	LikeRepository likeRepository = Mock()
+	VacancyRepository vacancyRepository = Mock()
 	RecruiterController controller = new RecruiterController(new RecruiterService(recruiterRepository,
 	enterpriseRepository, new RecruiterValidator(), connectionManager, likeRepository,
 	new RecruiterLikeService(connectionManager, recruiterRepository, Stub(CandidateRepository), likeRepository,
-	Stub(MatchRepository))))
+	Stub(MatchRepository))), new VacancyService(vacancyRepository, new VacancyValidator()))
 
 	private static RecruiterRequest request(Map changes = [:]) {
 		Map data = [name: 'Rafael Teixeira Lopes', email: 'rafael.lopes@techsolutions.com.br', password: '123456',
@@ -179,5 +186,62 @@ class RecruiterControllerSpec extends Specification {
 		then:
 		thrown(EntityNotFoundException)
 		0 * recruiterRepository.findAllByEnterprise(_)
+	}
+
+	def "listEnterpriseVacancies should return every vacancy of the recruiter enterprise in any status (CA19, CA21)"() {
+		given:
+		recruiterRepository.findById(7) >> validRecruiter(id: 7, enterpriseId: 3)
+
+		when:
+		List<VacancyAnonymousResponse> responses = controller.listEnterpriseVacancies(7)
+
+		then:
+		1 * vacancyRepository.findByEnterprise(3) >> [
+			validVacancy(id: 1, status: VacancyStatus.OPEN, enterprise: validEnterprise(id: 3)),
+			validVacancy(id: 2, status: VacancyStatus.PAUSED, enterprise: validEnterprise(id: 3)),
+			validVacancy(id: 3, status: VacancyStatus.CLOSED, enterprise: validEnterprise(id: 3))
+		]
+		0 * vacancyRepository.findByEnterprise({ it != 3 })
+		responses*.id() == [1, 2, 3]
+		responses*.status() == ['OPEN', 'PAUSED', 'CLOSED']
+		responses.every { it instanceof VacancyAnonymousResponse }
+	}
+
+	def "listEnterpriseVacancies should not expose any enterprise data (anonimato)"() {
+		given:
+		recruiterRepository.findById(7) >> validRecruiter(id: 7, enterpriseId: 3)
+		vacancyRepository.findByEnterprise(3) >> [validVacancy(enterprise: validEnterprise(id: 3))]
+
+		when:
+		List<VacancyAnonymousResponse> responses = controller.listEnterpriseVacancies(7)
+
+		then:
+		VacancyAnonymousResponse.recordComponents*.name.intersect(
+				['enterprise', 'enterpriseId', 'name', 'email', 'cnpj']).isEmpty()
+		!responses.first().toString().contains('TechSolutions')
+		!responses.first().toString().contains('11.222.333/0001-81')
+	}
+
+	def "listEnterpriseVacancies should fail with 404 and read no vacancy when the recruiter does not exist"() {
+		given:
+		recruiterRepository.findById(9999) >> null
+
+		when:
+		controller.listEnterpriseVacancies(9999)
+
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == 'Recrutador com ID 9999 não existe'
+		0 * vacancyRepository._
+	}
+
+	def "no vacancy create, update or delete operation should receive a recruiter (CA20)"() {
+		expect:
+		RecruiterController.declaredMethods*.name.findAll { it =~ /(?i)vacanc/ } == ['listEnterpriseVacancies']
+		[VacancyService, VacancyController].every { Class type ->
+			type.declaredMethods.every { method ->
+				!method.parameterTypes.any { it == Recruiter || it == RecruiterRequest }
+			}
+		}
 	}
 }

@@ -73,7 +73,7 @@ final class Application {
 				new EnterpriseController(enterpriseService),
 				new VacancyController(vacancyService, enterpriseService),
 				new CompetenceController(competenceService),
-				new RecruiterController(recruiterService),
+				new RecruiterController(recruiterService, vacancyService),
 				new LikeController(candidateLikeService, recruiterLikeService, matchQueryService)
 				)
 	}

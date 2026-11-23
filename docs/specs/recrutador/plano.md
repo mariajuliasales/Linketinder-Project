@@ -598,18 +598,23 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 
 ### T21 — Vagas da empresa para o recrutador (somente leitura)
 - **Camada:** back-end
-- **O que será feito:** `RecruiterController.listEnterpriseVacancies(recruiterId)` → `List<VacancyAnonymousResponse>`
-  com todas as vagas da empresa do recrutador, em qualquer status, usando o `VacancyRepository.findByEnterprise` que já
-  existe. Nenhum método de criar, editar ou excluir vaga recebe recrutador.
+- **O que será feito:** `RecruiterService#enterpriseIdOf(recruiterId)`: 404 "Recrutador com ID `<id>` não existe" se o
+  recrutador não existir; senão, devolve `recruiter.enterpriseId`. `RecruiterController.listEnterpriseVacancies(recruiterId)`
+  → `List<VacancyAnonymousResponse>` com todas as vagas da empresa do recrutador, em qualquer status, via
+  `VacancyService#findByEnterprise` (que usa o `VacancyRepository.findByEnterprise` já existente) e
+  `VacancyMapper.toAnonymousResponses`. O controller passa a receber também o `VacancyService`, obrigatório no
+  construtor. Nenhum método de criar, editar ou excluir vaga recebe recrutador.
 - **Arquivos envolvidos:** alterar `main/controller/RecruiterController.groovy`,
-  `test/controller/RecruiterControllerSpec.groovy`, `main/Application.groovy`
+  `test/controller/RecruiterControllerSpec.groovy`, `main/Application.groovy`, `main/service/RecruiterService.groovy`,
+  `test/service/RecruiterServiceSpec.groovy` (método `enterpriseIdOf`), `test/api/RecruiterServletSpec.groovy` (só
+  passa um `VacancyService` com `Stub(VacancyRepository)` na criação do controller, sem mudar nenhum caso de teste)
 - **Critérios de aceite cobertos:** CA19, CA20 (back), CA21
 - **Como validar:** `./gradlew test --tests '*RecruiterControllerSpec'`: vagas `OPEN`, `PAUSED` e `CLOSED` de E1
   aparecem; nenhuma de E2.
 - **Anonimato:** a resposta é `VacancyAnonymousResponse`, sem dados da empresa.
 - **Depende de:** T18
 - **Commit sugerido:** `feat(recrutador): list enterprise vacancies read-only for recruiter`
-- [ ] Concluída
+- [x] Concluída
 
 ---
 
@@ -859,7 +864,8 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   - seção 7: estado atual de curtida e match;
   - seção 8: tabelas de anonimato do recrutador;
   - seção 11: a skill e o CHANGELOG já existem;
-  - seção 12: limitações novas da spec 6.6.
+  - seção 12: limitações novas da spec 6.6, e também: as rotas e controllers que recebem `recruiterId`/`candidateId`
+    (T19, T20, T21) confiam no id informado; não há autenticação na API.
 
   Em `docs/api.md`, documenta o `POST /api/recruiters`.
 - **Arquivos envolvidos:** alterar `AGENTS.md`, `docs/api.md`

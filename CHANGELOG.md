@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Vagas da empresa para o recrutador, somente leitura: `RecruiterController#listEnterpriseVacancies` devolve
+  `VacancyAnonymousResponse` com todas as vagas da empresa do recrutador, em qualquer status, sem dados da empresa e sem
+  rota na API. Recrutador inexistente responde 404. Novo `RecruiterService#enterpriseIdOf`. O `RecruiterController`
+  passa a receber o `VacancyService` (obrigatório), montado em `Application#createControllers`. Nenhum método de criar,
+  editar ou excluir vaga recebe recrutador (#21).
 - "Minhas curtidas" do candidato no back-end: `LikeController#listLikedVacancies` devolve `VacancyMatchResponse` com as
   vagas curtidas em qualquer status, em ordem crescente de id, com descrição, cidade/UF (endereço da vaga), status e
   competências. Nome e e-mail da empresa só nas vagas com match; sem `enterpriseId` nem CNPJ. Candidato inexistente

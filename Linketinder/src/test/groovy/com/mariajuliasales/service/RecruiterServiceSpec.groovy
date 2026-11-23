@@ -407,4 +407,24 @@ class RecruiterServiceSpec extends Specification {
 		0 * realConnection.commit()
 		1 * realConnection.rollback()
 	}
+
+	def "enterpriseIdOf should return the enterprise of the recruiter"() {
+		given:
+		recruiterRepository.findById(R1) >> validRecruiter(id: R1, enterpriseId: ENTERPRISE)
+
+		expect:
+		recruiterService.enterpriseIdOf(R1) == ENTERPRISE
+	}
+
+	def "enterpriseIdOf should fail with 404 when the recruiter does not exist"() {
+		given:
+		recruiterRepository.findById(9999) >> null
+
+		when:
+		recruiterService.enterpriseIdOf(9999)
+
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == 'Recrutador com ID 9999 não existe'
+	}
 }
