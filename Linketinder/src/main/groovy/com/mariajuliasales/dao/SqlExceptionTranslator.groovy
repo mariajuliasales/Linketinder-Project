@@ -15,6 +15,7 @@ final class SqlExceptionTranslator {
 	private static final Map<String, String> DUPLICATE_MESSAGES = [
 		person_email_key    : 'E-mail já cadastrado',
 		candidate_cpf_key   : 'CPF já cadastrado',
+		recruiter_cpf_key   : 'CPF já cadastrado',
 		enterprise_cnpj_key : 'CNPJ já cadastrado',
 		competence_name_key : 'Competência já cadastrada'
 	]
