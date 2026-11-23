@@ -8,6 +8,7 @@ type NavLink = [route: string, text: string];
 const LINKS_BY_TYPE: Record<Account['type'], NavLink[]> = {
   CANDIDATE: [[ROUTES.vacancies, 'Vagas']],
   ENTERPRISE: [[ROUTES.candidates, 'Candidatos'], [ROUTES.myVacancies, 'Minhas vagas']],
+  RECRUITER: [[ROUTES.recruiterCandidates, 'Candidatos'], [ROUTES.recruiterVacancies, 'Vagas da empresa']],
 };
 
 function link(route: string, className: string, text: string): HTMLAnchorElement {
@@ -42,7 +43,10 @@ function loggedActions(account: Account): HTMLElement[] {
   return [
     ...LINKS_BY_TYPE[account.type].map(navLink),
     createElement('span', 'navbar-text text-white small ms-2', account.name),
-    button('btn btn-link link-light btn-sm', 'Excluir conta', confirmAccountDeletion),
+    // O recrutador não exclui a própria conta: quem remove é a empresa
+    ...(account.type === 'RECRUITER'
+      ? []
+      : [button('btn btn-link link-light btn-sm', 'Excluir conta', confirmAccountDeletion)]),
     button('btn btn-outline-light btn-sm', 'Sair', () => {
       logout();
       navigateTo(ROUTES.login);

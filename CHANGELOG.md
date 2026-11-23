@@ -9,6 +9,13 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Tipos e rotas do recrutador no front: `RECRUITER` em `PersonType`; `Recruiter` (sem endereço e sem competências) em
+  `Account`; `RECRUITMENT_AREAS`; `CandidateLike`, `RecruiterLike`, `EnterpriseLike` e `Match`, com `id`; e os tipos
+  para `pages/` `RecruiterSummary`, `CandidateCard` (nome, e-mail e vagas com match só em `reveal`), `VacancyCard`
+  (`likedByMe` opcional) e `LikedVacancyCard` (nome e e-mail da empresa só com match), sem CPF, nascimento, senha,
+  endereço, CNPJ nem `enterpriseId`. Rotas `#/recruiters`, `#/recruiter-candidates`, `#/recruiter-vacancies` e
+  `#/recruiter-profile`, que caem na home enquanto as telas não existem; o recrutador entra em
+  `#/recruiter-candidates`. Navbar do recrutador com "Candidatos" e "Vagas da empresa", sem "Excluir conta" (#21).
 - Vagas da empresa para o recrutador, somente leitura: `RecruiterController#listEnterpriseVacancies` devolve
   `VacancyAnonymousResponse` com todas as vagas da empresa do recrutador, em qualquer status, sem dados da empresa e sem
   rota na API. Recrutador inexistente responde 404. Novo `RecruiterService#enterpriseIdOf`. O `RecruiterController`
@@ -95,6 +102,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Front: o `register` de `auth.ts` e o cadastro público (`pages/register.ts`) passam a aceitar só candidato e empresa
+  (`SelfRegisteredType`). É só um ajuste de tipo, sem mudar o comportamento: o recrutador é cadastrado pela empresa (#21).
+- Spec e plano do Recrutador: a T22 inclui `auth.ts` e `register.ts` (só tipo); na T27, o `createRecruiter` é uma
+  função própria, que não usa o `register`; na T35, o `register.ts` não muda de comportamento; a spec 6.2 ganha a linha
+  de `pages/register.ts` (#21).
 - Spec do Recrutador: casos de borda B18 (descurtida por recrutador inexistente → 404) e B19 (descurtida de candidato
   inexistente → nada muda, como B8) (#21).
 - `CandidateLikeService` deixa de ignorar o retorno do `lockEnterprise`: se a empresa da vaga não existe mais, responde

@@ -23,7 +23,8 @@ export function isEmailInUse(email: string): boolean {
   return allAccounts().some((account) => isSameEmail(account.email, email));
 }
 
-export function register(account: Account): void {
+// Só candidato e empresa: o recrutador é cadastrado pela empresa, sem iniciar sessão
+export function register(account: Candidate | Enterprise): void {
   if (account.type === 'CANDIDATE') {
     storage.candidates.add(account);
   } else {

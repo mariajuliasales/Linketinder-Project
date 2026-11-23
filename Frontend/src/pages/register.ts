@@ -3,7 +3,7 @@ import { isEmailInUse, register } from '../services/auth';
 import { elementFromTemplate, requireElement } from '../ui/dom';
 import { competenceFieldset, isFormValid, readForm, stateSelect } from '../ui/forms';
 import type { FormReader } from '../ui/forms';
-import type { Account, IsoDate, PersonType } from '../types';
+import type { Candidate, Enterprise, IsoDate, SelfRegisteredType } from '../types';
 
 const MINIMUM_AGE = 16;
 const INVALID_EMAIL_MESSAGE = 'Informe um e-mail válido.';
@@ -98,11 +98,11 @@ const TEMPLATE = `
     </div>
   </div>`;
 
-function selectedType(page: HTMLElement): PersonType {
+function selectedType(page: HTMLElement): SelfRegisteredType {
   return requireElement<HTMLInputElement>(page, '#type-enterprise').checked ? 'ENTERPRISE' : 'CANDIDATE';
 }
 
-function showOnlyFieldsOf(page: HTMLElement, type: PersonType): void {
+function showOnlyFieldsOf(page: HTMLElement, type: SelfRegisteredType): void {
   page.querySelectorAll<HTMLElement>('[data-only]').forEach((field) => {
     const belongsToOtherType = field.dataset.only !== type;
     field.hidden = belongsToOtherType;
@@ -126,7 +126,7 @@ function markDuplicatedEmail(page: HTMLElement, email: string): void {
   requireElement(page, '#email-error').textContent = isDuplicated ? DUPLICATED_EMAIL_MESSAGE : INVALID_EMAIL_MESSAGE;
 }
 
-function buildAccount(fields: FormReader, type: PersonType): Account {
+function buildAccount(fields: FormReader, type: SelfRegisteredType): Candidate | Enterprise {
   const common = {
     id: crypto.randomUUID(),
     name: fields.text('name'),

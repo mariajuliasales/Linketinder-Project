@@ -627,17 +627,21 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
     `RECRUITMENT_AREAS`; tipos `CandidateLike`, `RecruiterLike`, `EnterpriseLike` e `Match`; tipos para `pages/`
     `RecruiterSummary`, `CandidateCard`, `VacancyCard` e `LikedVacancyCard`;
   - `navigation.ts`: rotas novas e `HOME_BY_TYPE.RECRUITER`;
-  - `ui/navbar.ts`: links do recrutador, sem "Excluir conta" para ele.
+  - `ui/navbar.ts`: links do recrutador, sem "Excluir conta" para ele;
+  - ajustes só de tipo, para o build passar: o `register` de `auth.ts` aceita só `Candidate | Enterprise`, porque quem
+    cadastra o recrutador é a empresa (T27); `pages/register.ts` usa `SelfRegisteredType` (`'CANDIDATE' | 'ENTERPRISE'`,
+    em `types.ts`), sem mudar o comportamento.
 
   Enquanto as telas não existem, as rotas novas caem na home.
-- **Arquivos envolvidos:** alterar `front/types.ts`, `front/navigation.ts`, `front/ui/navbar.ts`
+- **Arquivos envolvidos:** alterar `front/types.ts`, `front/navigation.ts`, `front/ui/navbar.ts`,
+  `front/services/auth.ts`, `front/pages/register.ts`
 - **Critérios de aceite cobertos:** base de CA48 e CA51
 - **Como validar:** `npm run build`. Manual: com conta de candidato e de empresa, a navbar continua igual.
 - **Anonimato:** `CandidateCard`, `VacancyCard` e `LikedVacancyCard` não têm `cpf`, `birthDate`, `password`,
   `address`, `cnpj` nem `enterpriseId`. `RecruiterSummary` não tem `cpf`, `birthDate` nem `password`.
 - **Depende de:** T21
 - **Commit sugerido:** `feat(recrutador): add recruiter types and routes to frontend`
-- [ ] Concluída
+- [x] Concluída
 
 ### T23 — Armazenamento e seed do front
 - **Camada:** front-end
@@ -709,7 +713,8 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T27 — Serviço de recrutadores no front
 - **Camada:** front-end
 - **O que será feito:** `services/recruiters.ts`:
-  - `createRecruiter(enterprise, data)`, com as mesmas validações de T07 e o e-mail único entre todas as contas;
+  - `createRecruiter(enterprise, data)`, com as mesmas validações de T07 e o e-mail único entre todas as contas. É uma
+    função própria: não usa o `register` de `auth.ts`, que só cadastra candidato e empresa e inicia a sessão;
   - `removeRecruiter(enterprise, id)`: só da própria empresa, com a regra de "saiu o último" de T26;
   - `listOwnRecruiters(enterprise)` → `RecruiterSummary[]`, montado por desestruturação;
   - `updateOwnProfile(recruiter, description, password)`.
@@ -839,7 +844,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T35 — Home e cadastro público
 - **Camada:** front-end
 - **O que será feito:** tira o "em breve" do passo "Dê match" da home. Confere que o cadastro público continua só com
-  candidato e empresa, sem mudar `register.ts`.
+  candidato e empresa, sem mudar o comportamento de `register.ts` (o ajuste de tipo foi feito na T22).
 - **Arquivos envolvidos:** alterar `front/pages/home.ts`
 - **Critérios de aceite cobertos:** CA18, CA51
 - **Como validar:** `npm run build`. Manual: a home sem o selo; `#/register` só com as duas opções; login de cada um dos

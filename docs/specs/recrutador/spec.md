@@ -711,6 +711,7 @@ O recrutador não tem endereço. Ao candidato, **nenhum** dado do recrutador é 
 | `Frontend/src/services/auth.ts`, `services/recruiters.ts`, `services/likes.ts` | login e cascatas; serviços novos |
 | `Frontend/src/pages/guards.ts`, páginas novas, `navigation.ts`, `router.ts`, `ui/navbar.ts` | guard e telas |
 | `Frontend/src/pages/home.ts`, `candidates.ts`, `vacancies.ts` | curtir e revelar |
+| `Frontend/src/pages/register.ts` | só ajuste de tipo; o cadastro público continua só com candidato e empresa |
 | `docs/api.md`, `AGENTS.md` | documentação |
 | `CHANGELOG.md` | entradas por tarefa |
 
