@@ -264,7 +264,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   (limitação aceita na spec 6.6, sem piorá-la).
 - **Depende de:** T08
 - **Commit sugerido:** `feat(recrutador): add recruiter service with create and profile update`
-- [ ] Concluída
+- [x] Concluída
 
 ### T10 — Repositório de curtidas
 - **Camada:** back-end
