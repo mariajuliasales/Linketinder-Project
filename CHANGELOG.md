@@ -9,6 +9,16 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Serviços de revelação após o match no front, sem tela que os use ainda. Em `services/candidates.ts`:
+  `listCandidateCardsForRecruiter()` e `listCandidateCardsForEnterprise()`, sem parâmetro. O recrutador ou a empresa
+  vêm da sessão, e a empresa da revelação vem deles, nunca do chamador. Lançam erro sem sessão do tipo certo, e
+  "Recrutador com ID `<id>` não existe" se o recrutador da sessão não existir mais. Os cards são anônimos; nome, e-mail
+  e as vagas com match (id, título e status) só aparecem com match com aquela empresa. `likedByMe` vem só da curtida
+  do próprio recrutador e é sempre `false` para a empresa. Em `services/vacancies.ts`: `listOpenVacancyCards` (só
+  `OPEN`, com `likedByMe`), `listLikedVacancyCards` ("Minhas curtidas", em qualquer status, com nome e e-mail da
+  empresa só na vaga com match) e `listEnterpriseVacanciesForRecruiter` (todas as vagas da empresa do recrutador,
+  somente leitura). Tudo é montado campo a campo, sem `enterpriseId`, CPF, nascimento, endereço, senha nem dado de
+  recrutador (#21).
 - Serviço de recrutadores no front, em `services/recruiters.ts`, espelhando o `RecruiterValidator` e o
   `RecruiterService` com as mesmas mensagens de erro. `createRecruiter`: valida nome, e-mail, senha (6+), CPF com
   dígitos verificadores, nascimento (não futuro, 18+, aceita quem faz 18 hoje) e área da lista (sem diferenciar
@@ -136,6 +146,8 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Plano do Recrutador: na T28, `listCandidateCards(enterpriseId, recruiterId?)` vira `listCandidateCardsForRecruiter()`
+  e `listCandidateCardsForEnterprise()`, que leem a sessão; a T30 passa a usar `listCandidateCardsForRecruiter()` (#21).
 - Plano do Recrutador: a T27 passa a incluir `data/storage.ts`, com `update(id, changes)` na `Collection`, que altera o
   item no lugar, e o `updateOwnProfile` passa a usar esse `update` (#21).
 - Front: o `register` de `auth.ts` e o cadastro público (`pages/register.ts`) passam a aceitar só candidato e empresa
@@ -156,6 +168,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 - `AGENTS.md`: a seção 4.2 passa a documentar o reset oficial do banco (`dropdb` + `createdb` + `schema.sql` +
   `seed.sql` + migrations) e avisa que reaplicar só o `schema.sql` sobre um banco migrado não é suportado. A seção 10
   passa a apontar para a spec aprovada do Recrutador.
+
+### Corrigido
+
+- Front: o login e a checagem de e-mail duplicado (`isEmailInUse`) passam a ignorar espaços nas pontas, além de
+  maiúsculas, ao comparar e-mails (`auth.ts#normalizeEmail`) (#21).
 
 ## [0.1.0] - 2026-11-04
 

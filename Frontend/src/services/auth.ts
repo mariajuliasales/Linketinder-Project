@@ -7,8 +7,12 @@ function allAccounts(): Account[] {
   return [...storage.candidates.getAll(), ...storage.enterprises.getAll(), ...storage.recruiters.getAll()];
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 function isSameEmail(first: string, second: string): boolean {
-  return first.toLowerCase() === second.toLowerCase();
+  return normalizeEmail(first) === normalizeEmail(second);
 }
 
 function startSession(account: Account): void {

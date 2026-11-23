@@ -741,8 +741,11 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T28 — Serviços de revelação no front
 - **Camada:** front-end
 - **O que será feito:**
-  - `services/candidates.ts`: `listCandidateCards(enterpriseId, recruiterId?)` → `CandidateCard[]` (anônimo; nome,
-    e-mail e vagas com match só se houver match com E; `likedByMe` só da curtida do próprio recrutador);
+  - `services/candidates.ts`: `listCandidateCardsForRecruiter()` e `listCandidateCardsForEnterprise()` →
+    `CandidateCard[]`. A empresa vem do recrutador logado ou da empresa logada, nunca de um parâmetro. Lança erro se
+    não houver recrutador ou empresa logada, ou se o recrutador da sessão não existir mais. Os cards são anônimos;
+    nome, e-mail e vagas com match só aparecem se houver match com essa empresa. `likedByMe` vem só da curtida do
+    próprio recrutador e é sempre `false` para a empresa;
   - `services/vacancies.ts`: `listOpenVacancyCards(candidate)` (com `likedByMe`), `listLikedVacancyCards(candidate)`
     (qualquer status, empresa só com match) e `listEnterpriseVacanciesForRecruiter(recruiter)`.
 - **Arquivos envolvidos:** alterar `front/services/candidates.ts`, `front/services/vacancies.ts`
@@ -752,7 +755,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   nos tipos devolvidos; nenhum dado de recrutador nos tipos do candidato.
 - **Depende de:** T26
 - **Commit sugerido:** `feat(recrutador): add reveal-after-match services to frontend`
-- [ ] Concluída
+- [x] Concluída
 
 ### T29 — Tela "Recrutadores" da empresa
 - **Camada:** front-end
@@ -776,6 +779,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Camada:** front-end
 - **O que será feito:** página do recrutador com os candidatos: "Candidato #N" anônimo, botão curtir/descurtir (só da
   própria curtida) e, com match, nome, e-mail e a lista das vagas de E com match. Mensagem de erro da autocurtida.
+  Os dados vêm de `listCandidateCardsForRecruiter()`, que lê o recrutador da sessão (T28).
 - **Erros 404:** a tela troca por uma mensagem genérica, sem o id interno (ver "Regras para todas as tarefas").
 - **Junção das listas:** a tela junta a listagem anônima com a lista de revelação, por id; candidato presente na
   revelação substitui o anônimo.
