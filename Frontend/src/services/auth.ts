@@ -14,9 +14,37 @@ function startSession(account: Account): void {
   storage.session.set({ type: account.type, id: account.id });
 }
 
-function removeEnterpriseWithVacancies(enterprise: Enterprise): void {
-  listOwnVacancies(enterprise).forEach((vacancy) => storage.vacancies.remove(vacancy.id));
+function removeWhere<T extends { id: string }>(
+  collection: { getAll(): T[]; remove(id: string): void },
+  shouldRemove: (item: T) => boolean,
+): void {
+  collection.getAll().filter(shouldRemove).forEach((item) => collection.remove(item.id));
+}
+
+// Espelha o ON DELETE CASCADE do banco: recrutadores, curtidas e matches ligados à empresa e às vagas dela
+function removeEnterpriseWithDependents(enterprise: Enterprise): void {
+  const vacancyIds = new Set(listOwnVacancies(enterprise).map((vacancy) => vacancy.id));
+  const recruiterIds = new Set(
+    storage.recruiters.getAll()
+      .filter((recruiter) => recruiter.enterpriseId === enterprise.id)
+      .map((recruiter) => recruiter.id),
+  );
+  removeWhere(storage.matches, (match) => vacancyIds.has(match.vacancyId));
+  removeWhere(storage.candidateLikes, (like) => vacancyIds.has(like.vacancyId));
+  removeWhere(storage.recruiterLikes, (like) => recruiterIds.has(like.recruiterId));
+  removeWhere(storage.enterpriseLikes, (like) => like.enterpriseId === enterprise.id);
+  removeWhere(storage.recruiters, (recruiter) => recruiterIds.has(recruiter.id));
+  removeWhere(storage.vacancies, (vacancy) => vacancyIds.has(vacancy.id));
   storage.enterprises.remove(enterprise.id);
+}
+
+// Espelha o ON DELETE CASCADE do banco: curtidas feitas e recebidas e matches do candidato
+function removeCandidateWithDependents(candidate: Candidate): void {
+  removeWhere(storage.matches, (match) => match.candidateId === candidate.id);
+  removeWhere(storage.candidateLikes, (like) => like.candidateId === candidate.id);
+  removeWhere(storage.recruiterLikes, (like) => like.candidateId === candidate.id);
+  removeWhere(storage.enterpriseLikes, (like) => like.candidateId === candidate.id);
+  storage.candidates.remove(candidate.id);
 }
 
 export function isEmailInUse(email: string): boolean {
@@ -70,16 +98,15 @@ export function getLoggedRecruiter(): Recruiter | undefined {
 
 export function deleteLoggedAccount(): void {
   const account = getLoggedAccount();
-  // O recrutador não exclui a própria conta: quem o remove é a empresa (T27). A cascata das exclusões
-  // (recrutadores, curtidas e matches) fica na T25.
+  // O recrutador não exclui a própria conta: quem o remove é a empresa (T27)
   if (account?.type === 'RECRUITER') {
     throw new Error('Recrutador não pode excluir a própria conta.');
   }
   if (account?.type === 'CANDIDATE') {
-    storage.candidates.remove(account.id);
+    removeCandidateWithDependents(account);
   }
   if (account?.type === 'ENTERPRISE') {
-    removeEnterpriseWithVacancies(account);
+    removeEnterpriseWithDependents(account);
   }
   logout();
 }

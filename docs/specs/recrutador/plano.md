@@ -690,7 +690,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** não se aplica (sem tela nova).
 - **Depende de:** T24
 - **Commit sugerido:** `feat(recrutador): cascade account deletion to recruiters, likes and matches in frontend`
-- [ ] Concluída
+- [x] Concluída
 
 ### T26 — Regras de curtida e match no front
 - **Camada:** front-end

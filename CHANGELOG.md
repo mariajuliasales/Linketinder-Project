@@ -9,6 +9,10 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Exclusão de contas em cascata no front, espelhando o `ON DELETE CASCADE` do banco em `auth.ts#deleteLoggedAccount`:
+  a empresa apaga também os recrutadores dela, as curtidas desses recrutadores, os `enterpriseLikes` dela, as curtidas
+  em vagas dela e os matches dessas vagas; o candidato apaga também as curtidas que fez, as `recruiterLikes` e
+  `enterpriseLikes` que recebeu e os matches dele. A conta de recrutador continua sendo recusada (#21).
 - Login e guard do recrutador no front: recrutadores entram em `allAccounts` (login por e-mail sem diferenciar
   maiúsculas e levado a `#/recruiter-candidates`), com `getLoggedRecruiter` no `auth.ts` e `requireLoggedRecruiter` no
   `guards.ts`. O guard de empresa barra o recrutador (ex.: `#/my-vacancies` redireciona para o login). E-mails de
