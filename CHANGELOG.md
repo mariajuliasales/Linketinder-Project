@@ -9,6 +9,15 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Regras de curtida e match no front, em `services/likes.ts`, espelhando o `CandidateLikeService` e o
+  `RecruiterLikeService` com as mesmas mensagens de erro. `likeVacancy`/`unlikeVacancy` (candidato): só curte vaga
+  `OPEN`, cria o match se a empresa já curte o candidato e a descurtida apaga só o match daquela vaga.
+  `likeCandidate`/`unlikeCandidate` (recrutador): bloqueia a autocurtida por CPF (só dígitos); na primeira curtida da
+  empresa grava o `enterpriseLike` e cria matches só com as vagas `OPEN` dela que o candidato curtiu; quando sai o
+  último recrutador da empresa, apaga o `enterpriseLike` e os matches do candidato com todas as vagas dela. Tudo
+  idempotente, sem devolver dados. Ainda sem tela que use o serviço. A spec (B14) passa a dizer que uma curtida
+  repetida do candidato também completa o par se o match ainda não existir; o plano registra a mensagem genérica no
+  lugar do 404 com id nas telas (T30, T34) e a dívida técnica do `removeWhere` duplicado (T27) (#21).
 - Exclusão de contas em cascata no front, espelhando o `ON DELETE CASCADE` do banco em `auth.ts#deleteLoggedAccount`:
   a empresa apaga também os recrutadores dela, as curtidas desses recrutadores, os `enterpriseLikes` dela, as curtidas
   em vagas dela e os matches dessas vagas; o candidato apaga também as curtidas que fez, as `recruiterLikes` e

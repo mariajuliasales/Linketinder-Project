@@ -711,7 +711,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** o serviço não devolve dados de outros recrutadores; só `boolean`/mensagem de erro.
 - **Depende de:** T23
 - **Commit sugerido:** `feat(recrutador): add like and match rules to frontend services`
-- [ ] Concluída
+- [x] Concluída
 
 ### T27 — Serviço de recrutadores no front
 - **Camada:** front-end
@@ -722,8 +722,11 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   - `listOwnRecruiters(enterprise)` → `RecruiterSummary[]`, montado por desestruturação;
   - `updateOwnProfile(recruiter, description, password)`, que grava com o `update` novo da `Collection`;
   - `data/storage.ts`: `Collection` ganha `update(id, changes)`, que altera o item no lugar e mantém a ordem da lista
-    (nada de `remove` seguido de `add`).
-- **Arquivos envolvidos:** criar `front/services/recruiters.ts`; alterar `front/data/storage.ts`
+    (nada de `remove` seguido de `add`);
+  - **dívida técnica de T26:** o `removeWhere` está duplicado em `services/auth.ts` e `services/likes.ts`. Movê-lo para
+    um utilitário comum exportado por `data/storage.ts` e usar esse utilitário nos dois serviços e em `recruiters.ts`.
+- **Arquivos envolvidos:** criar `front/services/recruiters.ts`; alterar `front/data/storage.ts`,
+  `front/services/auth.ts` e `front/services/likes.ts` (só a troca do `removeWhere`)
 - **Critérios de aceite cobertos:** CA06, CA07, CA10, CA11, CA12, CA15, CA16, CA17, CA46 (front)
 - **Como validar:** `npm run build`. O fluxo manual é feito em T29 e T32.
 - **Anonimato:** `listOwnRecruiters` devolve só `{ id, name, email, area, description }`.
@@ -769,6 +772,9 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Camada:** front-end
 - **O que será feito:** página do recrutador com os candidatos: "Candidato #N" anônimo, botão curtir/descurtir (só da
   própria curtida) e, com match, nome, e-mail e a lista das vagas de E com match. Mensagem de erro da autocurtida.
+- **Erros 404 do `services/likes.ts`:** o serviço mantém o texto do back-end ("`<Entidade>` com ID `<id>` não existe"),
+  mas a tela troca essa mensagem por uma genérica, sem o id interno (AGENTS.md 8). As mensagens 400 são exibidas
+  como vêm do serviço.
 - **Junção das listas:** a tela junta a listagem anônima com a lista de revelação, por id; candidato presente na
   revelação substitui o anônimo.
 - **Arquivos envolvidos:** criar `front/pages/recruiterCandidates.ts`; alterar `front/router.ts`
@@ -832,6 +838,9 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Camada:** front-end
 - **O que será feito:** `pages/vacancies.ts`: botão curtir/descurtir nas vagas `OPEN`; seção "Minhas curtidas" com as
   vagas curtidas em qualquer status, com o status, o botão de descurtir e, só com match, nome e e-mail da empresa.
+- **Erros 404 do `services/likes.ts`:** o serviço mantém o texto do back-end ("`<Entidade>` com ID `<id>` não existe"),
+  mas a tela troca essa mensagem por uma genérica, sem o id interno (AGENTS.md 8). As mensagens 400 são exibidas
+  como vêm do serviço.
 - **Arquivos envolvidos:** alterar `front/pages/vacancies.ts`
 - **Critérios de aceite cobertos:** CA22, CA23, CA24, CA25, CA26, CA39, CA42, CA43, CA52
 - **Como validar:** `npm run build`. Manual como Sandubinha:

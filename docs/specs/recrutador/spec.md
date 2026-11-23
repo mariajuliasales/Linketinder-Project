@@ -255,7 +255,7 @@ Os 404 usam o formato padrão do projeto, "`<Entidade>` com ID `<id>` não exist
 | B11 | C já tem match com V1 (E) e curte V4 (E, `OPEN`) | Curtida + match (C, V4) na mesma transação (2.2) | CA22 |
 | B12 | C descurte V1 com match | Só o match (C, V1) some. `enterprise_like(E, C)` e os outros matches continuam | CA25 |
 | B13 | E tem recrutadores de áreas TI e RH; R(RH) curte C, que curtiu vaga de TI | Match criado. A área não filtra | CA33 |
-| B14 | C curtiu V1 (`OPEN`) e V2 (`OPEN`) de E; V1 é pausada ou fechada; R1 curte C pela primeira vez | `recruiter_like` + `enterprise_like` + match (C, V2). **Sem** match (C, V1); `candidate_like(C, V1)` continua. Se V1 voltar a `OPEN`, o match não é criado automaticamente | CA34 |
+| B14 | C curtiu V1 (`OPEN`) e V2 (`OPEN`) de E; V1 é pausada ou fechada; R1 curte C pela primeira vez | `recruiter_like` + `enterprise_like` + match (C, V2). **Sem** match (C, V1); `candidate_like(C, V1)` continua. Se V1 voltar a `OPEN`, o match não é criado automaticamente: ele só nasce numa nova curtida que complete o par. Isso inclui C curtir V1 de novo (curtida repetida, já existente): com V1 `OPEN` e E curtindo C, o match (C, V1) é criado se ainda não existir | CA34 |
 | B15 | Remoção de R1, único recrutador de E que curte C | Mesmo efeito de B5 (2.1) | CA15 |
 | B16 | Falha ao gravar um dos matches em B1 | Rollback de tudo: nem `recruiter_like`, nem `enterprise_like`, nem matches | CA35 |
 | B17 | C tem match com V1; V1 é pausada ou fechada | O match continua | CA26 |
