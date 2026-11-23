@@ -53,6 +53,12 @@ class RecruiterService {
 		recruiterRepository.create(recruiter)
 	}
 
+	/** Só os recrutadores da própria empresa. 404 "Empresa com ID <id> não existe" se a empresa não existir. */
+	List<Recruiter> listByEnterprise(int enterpriseId) {
+		requireFound(enterpriseRepository.findById(enterpriseId), ENTERPRISE, enterpriseId)
+		recruiterRepository.findAllByEnterprise(enterpriseId)
+	}
+
 	/**
 	 * Atualiza a descrição e, se vier preenchida, a senha. Senha vazia mantém a atual. Só a senha nova é validada,
 	 * com a mesma mensagem do RecruiterValidator. Devolve o recrutador carregado, com a nova descrição e sem senha.

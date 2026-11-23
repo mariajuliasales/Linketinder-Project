@@ -78,6 +78,10 @@ Estado atual do código que a feature toca:
 - **Remoção**
   - **Só a empresa** remove os próprios recrutadores.
   - O recrutador não exclui a própria conta.
+- **Listagem**
+  - A empresa lista só os próprios recrutadores (filtro por `enterprise_id`), com nome, e-mail, área e descrição (4.3).
+  - Empresa inexistente → 404 "Empresa com ID `<id>` não existe".
+  - A listagem existe no service, no controller e no front. **Não há rota na API.**
 - **Edição**
   - O recrutador pode editar a própria descrição e a própria senha.
   - A senha é opcional na atualização. Se vier preenchida, é validada.

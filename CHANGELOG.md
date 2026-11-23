@@ -9,6 +9,13 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `RecruiterController` e rota `POST /api/recruiters`: a empresa cadastra um recrutador enviando `enterpriseId`
+  (inteiro, obrigatório) e os dados do recrutador. Responde 201 com `Location` e `RecruiterResponse` (sem CPF,
+  nascimento, idade nem senha); 400 para dados inválidos, 404 para empresa inexistente e 409 para e-mail ou CPF
+  duplicado. O controller também expõe `updateOwnProfile`, `removeByEnterprise` e `listByEnterprise`, sem rota na API.
+  `RecruiterService#listByEnterprise` devolve só os recrutadores da empresa (404 se ela não existir).
+  `Application#createControllers` passa a montar `RecruiterDAO`, `LikeDAO`, `MatchDAO`, `RecruiterLikeService` e
+  `RecruiterService` (#21).
 - `MatchedVacancyResponse`, `CandidateMatchResponse`, `VacancyMatchResponse` e `MatchMapper`: respostas de revelação
   montadas campo a campo. O candidato traz os dados anônimos e, só com match, nome, e-mail e as vagas da empresa com
   match (id, título, status). A vaga traz os dados anônimos com status e, só com match, nome e e-mail da empresa, sem

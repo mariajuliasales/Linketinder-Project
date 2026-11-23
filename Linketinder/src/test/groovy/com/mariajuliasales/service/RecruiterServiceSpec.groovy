@@ -138,6 +138,33 @@ class RecruiterServiceSpec extends Specification {
 		0 * recruiterRepository.create(_)
 	}
 
+	def "listByEnterprise should return only the recruiters of the enterprise (CA46)"() {
+		given:
+		enterpriseRepository.findById(ENTERPRISE) >> validEnterprise(id: ENTERPRISE)
+		List<Recruiter> own = [validRecruiter(id: 7, enterpriseId: ENTERPRISE), validRecruiter(id: 8, enterpriseId: ENTERPRISE)]
+
+		when:
+		List<Recruiter> result = recruiterService.listByEnterprise(ENTERPRISE)
+
+		then:
+		1 * recruiterRepository.findAllByEnterprise(ENTERPRISE) >> own
+		0 * recruiterRepository.findAllByEnterprise(OTHER_ENTERPRISE)
+		result*.id == [7, 8]
+	}
+
+	def "listByEnterprise should fail with 404 when the enterprise does not exist"() {
+		given:
+		enterpriseRepository.findById(9999) >> null
+
+		when:
+		recruiterService.listByEnterprise(9999)
+
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == "Empresa com ID 9999 não existe"
+		0 * recruiterRepository.findAllByEnterprise(_)
+	}
+
 	def "update own profile should keep the current password when the new one is #label"() {
 		given:
 		recruiterRepository.findById(1) >> validRecruiter(password: null)

@@ -4,6 +4,7 @@ import com.mariajuliasales.controller.CandidateController
 import com.mariajuliasales.controller.CompetenceController
 import com.mariajuliasales.controller.Controllers
 import com.mariajuliasales.controller.EnterpriseController
+import com.mariajuliasales.controller.RecruiterController
 import com.mariajuliasales.controller.VacancyController
 import com.mariajuliasales.dao.CandidateDAO
 import com.mariajuliasales.dao.CompetenceDAO
@@ -13,15 +14,21 @@ import com.mariajuliasales.dao.ConnectionManager
 import com.mariajuliasales.dao.DatabaseConfig
 import com.mariajuliasales.dao.DatabaseConnection
 import com.mariajuliasales.dao.EnterpriseDAO
+import com.mariajuliasales.dao.LikeDAO
+import com.mariajuliasales.dao.MatchDAO
+import com.mariajuliasales.dao.RecruiterDAO
 import com.mariajuliasales.dao.VacancyDAO
 import com.mariajuliasales.service.CandidateService
 import com.mariajuliasales.service.CompetenceService
 import com.mariajuliasales.service.EnterpriseService
+import com.mariajuliasales.service.RecruiterLikeService
+import com.mariajuliasales.service.RecruiterService
 import com.mariajuliasales.service.VacancyService
 import com.mariajuliasales.service.validator.CandidateValidator
 import com.mariajuliasales.service.validator.CompetenceValidator
 import com.mariajuliasales.service.validator.EnterpriseValidator
 import com.mariajuliasales.service.validator.PersonValidator
+import com.mariajuliasales.service.validator.RecruiterValidator
 import com.mariajuliasales.service.validator.VacancyValidator
 
 final class Application {
@@ -38,19 +45,28 @@ final class Application {
 		CompetenceLinkDAO competenceLinkDAO = new CompetenceLinkDAO(competenceDAO)
 		VacancyDAO vacancyDAO = new VacancyDAO(database, competenceLinkDAO)
 
+		CandidateDAO candidateDAO = new CandidateDAO(database, competenceLinkDAO)
+		EnterpriseDAO enterpriseDAO = new EnterpriseDAO(database, competenceLinkDAO, vacancyDAO)
+		RecruiterDAO recruiterDAO = new RecruiterDAO(database)
+		LikeDAO likeDAO = new LikeDAO()
+		MatchDAO matchDAO = new MatchDAO()
+
 		PersonValidator personValidator = new PersonValidator()
-		CandidateService candidateService = new CandidateService(
-				new CandidateDAO(database, competenceLinkDAO), new CandidateValidator(personValidator))
-		EnterpriseService enterpriseService = new EnterpriseService(
-				new EnterpriseDAO(database, competenceLinkDAO, vacancyDAO), new EnterpriseValidator(personValidator))
+		CandidateService candidateService = new CandidateService(candidateDAO, new CandidateValidator(personValidator))
+		EnterpriseService enterpriseService = new EnterpriseService(enterpriseDAO, new EnterpriseValidator(personValidator))
 		VacancyService vacancyService = new VacancyService(vacancyDAO, new VacancyValidator())
 		CompetenceService competenceService = new CompetenceService(competenceDAO, new CompetenceValidator())
+		RecruiterLikeService recruiterLikeService = new RecruiterLikeService(
+				database, recruiterDAO, candidateDAO, likeDAO, matchDAO)
+		RecruiterService recruiterService = new RecruiterService(
+				recruiterDAO, enterpriseDAO, new RecruiterValidator(), database, likeDAO, recruiterLikeService)
 
 		new Controllers(
 				new CandidateController(candidateService),
 				new EnterpriseController(enterpriseService),
 				new VacancyController(vacancyService, enterpriseService),
-				new CompetenceController(competenceService)
+				new CompetenceController(competenceService),
+				new RecruiterController(recruiterService)
 				)
 	}
 }

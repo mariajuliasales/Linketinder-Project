@@ -471,22 +471,26 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   exige `enterpriseId` inteiro, chama `create` e responde 201 com `Location` e `RecruiterResponse`. Os erros saem pelo
   `JsonResponse.sendError` (400/404/409). Registro em `Controllers`, `Application#createControllers` e `ApiMain`.
   Registrar também `LikeDAO` e `MatchDAO` no `Application.groovy`.
+  `RecruiterService#listByEnterprise(enterpriseId)`: 404 "Empresa com ID `<id>` não existe" se a empresa não existir;
+  senão, `recruiterRepository.findAllByEnterprise(enterpriseId)`.
 - **Arquivos envolvidos:** criar `main/controller/RecruiterController.groovy`,
   `test/controller/RecruiterControllerSpec.groovy`, `main/api/RecruiterServlet.groovy`,
   `test/api/RecruiterServletSpec.groovy`; alterar `main/controller/Controllers.groovy`, `main/Application.groovy`,
-  `main/ApiMain.groovy`
+  `main/ApiMain.groovy`; alterar `main/service/RecruiterService.groovy`, `test/service/RecruiterServiceSpec.groovy`
+  (método `listByEnterprise`)
 - **Critérios de aceite cobertos:** CA06, CA07, CA08, CA13, CA14, CA17, CA44, CA46
 - **Como validar:**
   - `./gradlew test --tests '*RecruiterControllerSpec' --tests '*RecruiterServletSpec'`. No servlet, com `Stub()` de
     request e response: 201 + `Location`; o corpo JSON não contém as chaves `cpf`, `birthDate`, `age` nem `password`;
     `enterpriseId` ausente → 400;
+  - `--tests '*RecruiterServiceSpec'`: a listagem devolve só os recrutadores da empresa; empresa inexistente → 404;
   - manual: `./gradlew runApi` + `curl -X POST localhost:8080/api/recruiters ...` contra o banco de T04 (201, depois o
     mesmo e-mail em maiúsculas → 409, e `enterpriseId` 9999 → 404).
 - **Anonimato:** o controller devolve `RecruiterResponse`, nunca `Recruiter`; o teste do servlet verifica a
   **ausência** dos campos no JSON serializado. Nenhum log novo.
 - **Depende de:** T09, T15, T16
 - **Commit sugerido:** `feat(recrutador): add recruiter controller and POST /api/recruiters endpoint`
-- [ ] Concluída
+- [x] Concluída
 
 ### T19 — Curtidas e visão de candidatos para recrutador e empresa
 - **Camada:** back-end
