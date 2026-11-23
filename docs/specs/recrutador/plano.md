@@ -832,7 +832,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** a tela mostra só os dados do próprio recrutador, sem CPF nem nascimento.
 - **Depende de:** T27
 - **Commit sugerido:** `feat(recrutador): add recruiter profile page`
-- [ ] Concluída
+- [x] Concluída
 
 ### T33 — Candidatos da empresa com revelação
 - **Camada:** front-end

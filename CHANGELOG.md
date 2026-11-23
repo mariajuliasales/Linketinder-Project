@@ -9,6 +9,10 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Tela "Meu perfil" do recrutador no front (`pages/recruiterProfile.ts`), na rota `#/recruiter-profile`, com link
+  na navbar do recrutador. Mostra nome, e-mail, área e o nome da empresa só para leitura, e edita a descrição e a senha
+  por `updateOwnProfile`: senha vazia mantém a atual e senha com menos de 6 caracteres mostra o erro do serviço. Não
+  há opção de excluir a conta. O 404 com id vira uma mensagem genérica, e CPF, nascimento e `id` não aparecem (#21).
 - Tela de vagas do recrutador no front (`pages/recruiterVacancies.ts`), na rota `#/recruiter-vacancies`, somente
   leitura. Lista todas as vagas da própria empresa em qualquer status (`OPEN`, `PAUSED`, `CLOSED`), com o status de
   cada uma, título, cidade/UF, descrição e competências, e o nome da empresa no cabeçalho. Não há botão de criar,

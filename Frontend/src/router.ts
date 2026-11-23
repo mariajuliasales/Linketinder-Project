@@ -4,6 +4,7 @@ import { homePage } from './pages/home';
 import { loginPage } from './pages/login';
 import { myVacanciesPage } from './pages/myVacancies';
 import { recruiterCandidatesPage } from './pages/recruiterCandidates';
+import { recruiterProfilePage } from './pages/recruiterProfile';
 import { recruiterVacanciesPage } from './pages/recruiterVacancies';
 import { recruitersPage } from './pages/recruiters';
 import { registerPage } from './pages/register';
@@ -22,6 +23,7 @@ const PAGES: Record<string, () => HTMLElement> = {
   [ROUTES.recruiters]: recruitersPage,
   [ROUTES.recruiterCandidates]: recruiterCandidatesPage,
   [ROUTES.recruiterVacancies]: recruiterVacanciesPage,
+  [ROUTES.recruiterProfile]: recruiterProfilePage,
 };
 
 function render(app: HTMLElement): void {
