@@ -393,15 +393,20 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
   se nenhum outro recrutador de E curte C, apaga o `enterprise_like(E, C)` e os matches de C com todas as vagas de E.
   A lógica de "saiu o último" fica num método reaproveitado em T15.
 - **Arquivos envolvidos:** alterar `main/service/RecruiterLikeService.groovy`, `test/service/RecruiterLikeServiceSpec.groovy`
-- **Critérios de aceite cobertos:** CA30 (B4, B5), CA31 (B8)
+  e `docs/specs/recrutador/spec.md` (casos de borda B18 e B19, aprovados durante a tarefa)
+- **Critérios de aceite cobertos:** CA30 (B4, B5), CA31 (B8, B18, B19)
 - **Como validar:** `./gradlew test --tests '*RecruiterLikeServiceSpec'`:
   - B4: `0 * deleteEnterpriseLike`;
   - B5: `1 * deleteEnterpriseLike` e `1 * deleteMatchesOfCandidateWithEnterprise`;
-  - B8: sem erro e sem `delete`.
+  - B8: sem erro e sem `delete`;
+  - B18: recrutador inexistente → 404 "Recrutador com ID `<id>` não existe", nada apagado;
+  - B19: candidato inexistente → sem erro e sem `delete` (igual a B8);
+  - `lockEnterprise` devolve `false` → 404 "Recrutador com ID `<id>` não existe", nada apagado (igual a T13);
+  - falha ao apagar os matches → `0 * connection.commit()` e `1 * connection.rollback()`.
 - **Anonimato:** não se aplica.
 - **Depende de:** T13
 - **Commit sugerido:** `feat(recrutador): remove enterprise like and matches when last recruiter unlikes`
-- [ ] Concluída
+- [x] Concluída
 
 ### T15 — Remoção do recrutador pela empresa
 - **Camada:** back-end

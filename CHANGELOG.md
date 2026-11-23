@@ -9,6 +9,11 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- `RecruiterLikeService#unlike`: descurtida idempotente do recrutador, numa transação que trava a empresa. Apaga a
+  `recruiter_like` e, se nenhum outro recrutador da empresa curte o candidato, apaga o `enterprise_like` e os matches
+  do candidato com todas as vagas da empresa. Responde 404 se o recrutador ou a empresa não existem; candidato
+  inexistente não muda nada. A regra de "saiu o último" fica em `releaseRecruiterLike`, para ser reaproveitada na
+  remoção do recrutador (#21).
 - `RecruiterLikeService`: curtida do recrutador em candidato, numa transação que trava a empresa e mantém a invariante
   `enterprise_like` ⇔ `recruiter_like`: confere se a empresa já curtia o candidato antes de gravar a curtida e, na
   primeira curtida da empresa, grava o `enterprise_like` e cria o match só com as vagas `OPEN` que o candidato curtiu.
@@ -49,6 +54,8 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Spec do Recrutador: casos de borda B18 (descurtida por recrutador inexistente → 404) e B19 (descurtida de candidato
+  inexistente → nada muda, como B8) (#21).
 - `CandidateLikeService` deixa de ignorar o retorno do `lockEnterprise`: se a empresa da vaga não existe mais, responde
   404 "Vaga com ID `<id>` não existe", sem revelar a empresa (#21).
 - Spec e plano do Recrutador: os 404 passam a usar o formato padrão do projeto, "`<Entidade>` com ID `<id>` não

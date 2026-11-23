@@ -265,4 +265,111 @@ class RecruiterLikeServiceSpec extends Specification {
 		0 * realConnection.commit()
 		1 * realConnection.rollback()
 	}
+
+	def "unlike should delete only the recruiter like when another recruiter of the enterprise still likes the candidate (B4)"() {
+		when:
+		service.unlike(R1, CANDIDATE)
+
+		then:
+		1 * likeRepository.lockEnterprise(connection, ENTERPRISE) >> true
+
+		then:
+		1 * likeRepository.deleteRecruiterLike(connection, R1, CANDIDATE) >> true
+
+		then:
+		1 * likeRepository.otherRecruiterOfEnterpriseLikes(connection, R1, CANDIDATE) >> true
+		0 * likeRepository.deleteEnterpriseLike(*_)
+		0 * matchRepository._
+	}
+
+	def "unlike by the last recruiter should delete recruiter like, enterprise like and the matches with all vacancies of the enterprise (B5)"() {
+		when:
+		service.unlike(R2, CANDIDATE)
+
+		then:
+		1 * likeRepository.lockEnterprise(connection, ENTERPRISE) >> true
+
+		then:
+		1 * likeRepository.deleteRecruiterLike(connection, R2, CANDIDATE) >> true
+
+		then:
+		1 * likeRepository.otherRecruiterOfEnterpriseLikes(connection, R2, CANDIDATE) >> false
+
+		then:
+		1 * likeRepository.deleteEnterpriseLike(connection, ENTERPRISE, CANDIDATE) >> true
+		1 * matchRepository.deleteMatchesOfCandidateWithEnterprise(connection, CANDIDATE, ENTERPRISE) >> 2
+		0 * likeRepository.deleteEnterpriseLike(*_)
+		0 * matchRepository._
+	}
+
+	def "unlike should not fail nor change anything when the recruiter did not like the candidate (B8)"() {
+		when:
+		service.unlike(R1, CANDIDATE)
+
+		then:
+		1 * likeRepository.deleteRecruiterLike(connection, R1, CANDIDATE) >> false
+		0 * likeRepository.otherRecruiterOfEnterpriseLikes(*_)
+		0 * likeRepository.deleteEnterpriseLike(*_)
+		0 * matchRepository._
+		noExceptionThrown()
+	}
+
+	def "unlike should not fail nor change anything when the candidate does not exist (B19)"() {
+		when:
+		service.unlike(R1, 99)
+
+		then:
+		1 * likeRepository.deleteRecruiterLike(connection, R1, 99) >> false
+		0 * likeRepository.otherRecruiterOfEnterpriseLikes(*_)
+		0 * likeRepository.deleteEnterpriseLike(*_)
+		0 * matchRepository._
+		noExceptionThrown()
+	}
+
+	def "unlike should fail with 404 and delete nothing when the recruiter does not exist (B18)"() {
+		when:
+		service.unlike(99, CANDIDATE)
+
+		then:
+		EntityNotFoundException exception = thrown()
+		exception.message == 'Recrutador com ID 99 não existe'
+		0 * likeRepository._
+		0 * matchRepository._
+	}
+
+	def "unlike should fail with 404 and delete nothing when the enterprise no longer exists at lock time"() {
+		when:
+		service.unlike(R1, CANDIDATE)
+
+		then:
+		1 * likeRepository.lockEnterprise(connection, ENTERPRISE) >> false
+		EntityNotFoundException exception = thrown()
+		exception.message == "Recrutador com ID ${R1} não existe"
+		0 * likeRepository._
+		0 * matchRepository._
+	}
+
+	def "unlike should roll back everything when deleting the matches fails"() {
+		given:
+		Connection realConnection = Mock()
+		ConnectionFactory connectionFactory = Stub() {
+			createConnection() >> realConnection
+		}
+		RecruiterLikeService transactionalService = new RecruiterLikeService(new DatabaseConnection(connectionFactory),
+		recruiterRepository, candidateRepository, likeRepository, matchRepository)
+		likeRepository.deleteRecruiterLike(realConnection, R1, CANDIDATE) >> true
+		likeRepository.otherRecruiterOfEnterpriseLikes(realConnection, R1, CANDIDATE) >> false
+
+		when:
+		transactionalService.unlike(R1, CANDIDATE)
+
+		then:
+		1 * likeRepository.deleteEnterpriseLike(realConnection, ENTERPRISE, CANDIDATE) >> true
+		1 * matchRepository.deleteMatchesOfCandidateWithEnterprise(realConnection, CANDIDATE, ENTERPRISE) >> {
+			throw new IllegalStateException('falha ao apagar os matches')
+		}
+		thrown(IllegalStateException)
+		0 * realConnection.commit()
+		1 * realConnection.rollback()
+	}
 }

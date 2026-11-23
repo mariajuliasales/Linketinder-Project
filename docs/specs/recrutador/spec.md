@@ -255,6 +255,8 @@ Os 404 usam o formato padrão do projeto, "`<Entidade>` com ID `<id>` não exist
 | B15 | Remoção de R1, único recrutador de E que curte C | Mesmo efeito de B5 (2.1) | CA15 |
 | B16 | Falha ao gravar um dos matches em B1 | Rollback de tudo: nem `recruiter_like`, nem `enterprise_like`, nem matches | CA35 |
 | B17 | C tem match com V1; V1 é pausada ou fechada | O match continua | CA26 |
+| B18 | R1 descurte C e o recrutador não existe | 404 "Recrutador com ID `<id>` não existe" | CA31 |
+| B19 | R1 descurte C e o candidato não existe | Nada muda (igual a B8) | CA31 |
 
 ### 2.4 Revelação após o match
 

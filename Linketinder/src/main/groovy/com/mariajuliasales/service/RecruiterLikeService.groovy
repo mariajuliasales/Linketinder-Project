@@ -17,7 +17,7 @@ import static com.mariajuliasales.exception.EntityNotFoundException.requireFound
 import static com.mariajuliasales.service.validator.Validation.require
 
 /**
- * Curtida do recrutador em candidato. Guarda a invariante:
+ * Curtida e descurtida do recrutador em candidato. Guarda a invariante:
  * enterprise_like(E, C) existe se e somente se algum recrutador de E curte C. O banco não garante essa invariante.
  * O recrutador e o candidato carregados ficam só neste serviço: nenhum dado sai daqui.
  * Ordem das travas: sempre enterprise antes de vacancy.
@@ -70,6 +70,40 @@ class RecruiterLikeService {
 				matchRepository.insertMatch(connection, candidateId, vacancyId)
 			}
 		}
+	}
+
+	/**
+	 * Descurtida, idempotente (recrutador que não curtia C: sem erro e sem mudança). 404 se o recrutador não existe,
+	 * antes da transação, ou se E sumiu na hora da trava (o recrutador cai junto em cascata). Na transação: trava E →
+	 * apaga a recruiter_like e aplica a regra de "saiu o último" (releaseRecruiterLike). Qualquer erro desfaz tudo.
+	 */
+	void unlike(int recruiterId, int candidateId) {
+		Recruiter recruiter = requireFound(recruiterRepository.findById(recruiterId), RECRUITER, recruiterId)
+		int enterpriseId = recruiter.enterpriseId
+
+		connectionManager.withTransaction { Connection connection ->
+			if (!likeRepository.lockEnterprise(connection, enterpriseId)) {
+				throw new EntityNotFoundException(RECRUITER, recruiterId)
+			}
+			releaseRecruiterLike(connection, enterpriseId, recruiterId, candidateId)
+		}
+	}
+
+	/**
+	 * Apaga a recruiter_like(R, C) e, se nenhum outro recrutador de E curte C ("saiu o último"), apaga a
+	 * enterprise_like(E, C) e os matches de C com todas as vagas de E. Se R não curtia C, nada muda.
+	 * Precisa ser chamado dentro da transação do serviço, com E já travada (LikeRepository#lockEnterprise).
+	 * Também usado na remoção do recrutador pela empresa.
+	 */
+	void releaseRecruiterLike(Connection connection, int enterpriseId, int recruiterId, int candidateId) {
+		if (!likeRepository.deleteRecruiterLike(connection, recruiterId, candidateId)) {
+			return
+		}
+		if (likeRepository.otherRecruiterOfEnterpriseLikes(connection, recruiterId, candidateId)) {
+			return
+		}
+		likeRepository.deleteEnterpriseLike(connection, enterpriseId, candidateId)
+		matchRepository.deleteMatchesOfCandidateWithEnterprise(connection, candidateId, enterpriseId)
 	}
 
 	/** Só vagas OPEN ganham match novo; a candidate_like em vaga PAUSED/CLOSED continua, sem match. */
