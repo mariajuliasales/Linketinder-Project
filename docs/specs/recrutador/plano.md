@@ -130,7 +130,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 - **Anonimato:** não se aplica.
 - **Depende de:** T01
 - **Commit sugerido:** `docs(recrutador): document official database reset and recruiter scope in AGENTS.md`
-- [ ] Concluída
+- [x] Concluída
 
 ### T03 — Migration de recrutador, área e curtida do recrutador
 - **Camada:** banco
@@ -719,6 +719,10 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T36 — AGENTS.md e docs da API
 - **Camada:** todas (documentação)
 - **O que será feito:** atualiza o AGENTS.md:
+  - seção 5.1, item 1: ressalva de que o `schema.sql` não deve ser reaplicado sozinho sobre banco migrado (usar o reset
+    oficial da 4.2), com o texto: "1. `Database/schema.sql`: base. Começa com `DROP TABLE ... CASCADE`, então
+    **reaplicá-lo apaga todos os dados**. Sobre um banco que já recebeu migrations, não o reaplique sozinho: use o reset
+    oficial da seção 4.2.";
   - seção 6: recrutador, área e curtidas no domínio;
   - seção 7: estado atual de curtida e match;
   - seção 8: tabelas de anonimato do recrutador;

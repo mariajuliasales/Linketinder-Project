@@ -20,6 +20,12 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 - `AGENTS.md` com o contexto do projeto para agentes de IA: domínio, regras de curtida e match, Princípio do Anonimato
   e banco de dados.
 
+### Modificado
+
+- `AGENTS.md`: a seção 4.2 passa a documentar o reset oficial do banco (`dropdb` + `createdb` + `schema.sql` +
+  `seed.sql` + migrations) e avisa que reaplicar só o `schema.sql` sobre um banco migrado não é suportado. A seção 10
+  passa a apontar para a spec aprovada do Recrutador.
+
 ## [0.1.0] - 2026-11-04
 
 ### Adicionado

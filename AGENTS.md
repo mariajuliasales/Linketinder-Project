@@ -93,14 +93,21 @@ Linketinder-Project/
 - Node.js 20.19+ ou 22.12+
 
 ### 4.2 Banco de dados (a partir de `Database/`)
+**Reset oficial** (cria o banco do zero; também serve para a primeira instalação):
 ```bash
 export PGPASSWORD=suasenha
-createdb -h localhost -U postgres linketinder                                   # só na primeira vez
-psql -h localhost -U postgres -d linketinder -f schema.sql                      # ⚠️ APAGA TODOS OS DADOS
-psql -h localhost -U postgres -d linketinder -f seed.sql
-for f in migrations/*.sql; do psql -h localhost -U postgres -d linketinder -v ON_ERROR_STOP=1 -f "$f"; done   # idempotentes, podem ser reaplicadas
+dropdb -h localhost -U postgres --if-exists linketinder && createdb -h localhost -U postgres linketinder   # ⚠️ APAGA TODOS OS DADOS
+psql -h localhost -U postgres -d linketinder -v ON_ERROR_STOP=1 -f schema.sql
+psql -h localhost -U postgres -d linketinder -v ON_ERROR_STOP=1 -f seed.sql
+for f in migrations/*.sql; do psql -h localhost -U postgres -d linketinder -v ON_ERROR_STOP=1 -f "$f"; done
 psql -h localhost -U postgres -d linketinder -P pager=off -f queries.sql        # opcional
 ```
+
+- **Só migrar um banco existente:** rode apenas o laço `for f in migrations/*.sql`. As migrations são idempotentes e
+  podem ser reaplicadas sem perder dados.
+- ⚠️ **Reaplicar só o `schema.sql` sobre um banco que já recebeu as migrations não é suportado.** O `DROP TYPE
+  person_type CASCADE` remove a coluna `recruiter.person_type`, mas deixa a tabela `recruiter`, e o banco fica
+  inconsistente. Para recomeçar, use sempre o reset oficial acima (fonte: `docs/specs/recrutador/spec.md` › 3.3).
 
 ### 4.3 Back-end (a partir de `Linketinder/`)
 ```bash
@@ -417,7 +424,9 @@ Erros de SQL novos devem ser traduzidos no `SqlExceptionTranslator`, sem `catch`
 5. **Faça mudanças pequenas e revisáveis:** uma preocupação por mudança, sem refatorar código não relacionado.
 6. Implemente features no banco + back-end **e** no front isolado (seção 4.5).
 7. Não estenda os menus do console com dados identificáveis (seção 12).
-8. A feature **Recrutador** está fora do escopo deste arquivo e terá spec própria. Não deduza regras dela daqui.
+8. A feature **Recrutador** segue a spec aprovada `docs/specs/recrutador/spec.md` e o plano
+   `docs/specs/recrutador/plano.md`. As regras do recrutador vêm de lá, não deste arquivo, que ainda descreve o sistema
+   sem ele.
 9. `./gradlew build` e `npm run build` devem passar ao fim de cada tarefa.
 
 ---
