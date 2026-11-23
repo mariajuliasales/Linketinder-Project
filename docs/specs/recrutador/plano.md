@@ -248,16 +248,18 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T09 — Serviço do recrutador: cadastro e edição
 - **Camada:** back-end
 - **O que será feito:** `RecruiterService`:
-  - `create(enterpriseId, recruiter)`: valida, depois confere a empresa (404 "Empresa não encontrada") e o e-mail
+  - `create(enterpriseId, recruiter)`: valida, depois confere a empresa (404 "Empresa com ID `<id>` não existe") e o e-mail
     (`isEmailInUse` → 409 "E-mail já cadastrado"), e só então grava. **Não** confere o CPF contra candidatos;
-  - `updateOwnProfile(recruiterId, description, password)`: senha vazia mantém a atual; senha curta → 400.
+  - `updateOwnProfile(recruiterId, description, password)`: senha vazia mantém a atual; senha curta → 400; recrutador
+    inexistente → 404 "Recrutador com ID `<id>` não existe".
 - **Arquivos envolvidos:** criar `main/service/RecruiterService.groovy`, `test/service/RecruiterServiceSpec.groovy`
 - **Critérios de aceite cobertos:** CA06, CA07, CA09, CA13, CA17
 - **Como validar:** `./gradlew test --tests '*RecruiterServiceSpec'`, cobrindo:
   - e-mail `Ana@X.com` em uso → 409 e `0 * repository.create(_)`;
   - CPF igual ao de um candidato → aceito;
   - empresa inexistente → 404 e nada salvo;
-  - edição com senha vazia, curta e válida.
+  - edição com senha vazia, curta e válida;
+  - edição de recrutador inexistente → 404 (no carregamento e quando `updateProfile` devolve `false`).
 - **Anonimato:** a mensagem de 409 é a genérica "E-mail já cadastrado" e não diz o tipo da pessoa que já usa o e-mail
   (limitação aceita na spec 6.6, sem piorá-la).
 - **Depende de:** T08
@@ -300,7 +302,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T12 — Curtida do candidato
 - **Camada:** back-end
 - **O que será feito:** `CandidateLikeService` com `like(candidateId, vacancyId)` e `unlike(candidateId, vacancyId)`,
-  numa transação. Na curtida, a ordem é: trava E → vaga existe (404 "Vaga não encontrada") → vaga `OPEN` (400 "Só é
+  numa transação. Na curtida, a ordem é: trava E → vaga existe (404 "Vaga com ID `<id>` não existe") → vaga `OPEN` (400 "Só é
   possível curtir vagas abertas") → grava a curtida (idempotente) → se `enterprise_like(E, C)` existe, cria o match. A
   descurtida funciona em qualquer status; o match cai pela FK.
 - **Arquivos envolvidos:** criar `main/service/CandidateLikeService.groovy`, `test/service/CandidateLikeServiceSpec.groovy`
@@ -319,7 +321,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T13 — Curtida do recrutador
 - **Camada:** back-end
 - **O que será feito:** `RecruiterLikeService.like(recruiterId, candidateId)`, numa transação. A ordem é: recrutador e
-  candidato existem (404 "Candidato não encontrado") → mesmo CPF (400 "Você não pode curtir o seu próprio perfil de
+  candidato existem (404 "Candidato com ID `<id>` não existe") → mesmo CPF (400 "Você não pode curtir o seu próprio perfil de
   candidato.") → trava E → grava a `recruiter_like` (idempotente) → se é a primeira de E, grava `enterprise_like` e
   cria o match com cada vaga **`OPEN`** de E que C curtiu.
 - **Arquivos envolvidos:** criar `main/service/RecruiterLikeService.groovy`, `test/service/RecruiterLikeServiceSpec.groovy`
@@ -357,7 +359,7 @@ A spec (com a seção "Minhas curtidas") e este plano são commitados antes de q
 ### T15 — Remoção do recrutador pela empresa
 - **Camada:** back-end
 - **O que será feito:** `RecruiterService.removeByEnterprise(enterpriseId, recruiterId)`, numa transação: busca com
-  `findByIdAndEnterprise` (404 "Recrutador não encontrado" quando é de outra empresa ou não existe) → trava E → para
+  `findByIdAndEnterprise` (404 "Recrutador com ID `<id>` não existe" quando é de outra empresa ou não existe) → trava E → para
   cada C curtido por ele, apaga a `recruiter_like` e aplica a regra de "saiu o último" (T14) → apaga `recruiter` e
   `person`.
 - **Arquivos envolvidos:** alterar `main/service/RecruiterService.groovy`, `test/service/RecruiterServiceSpec.groovy`

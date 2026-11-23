@@ -35,6 +35,9 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Spec e plano do Recrutador: os 404 passam a usar o formato padrão do projeto, "`<Entidade>` com ID `<id>` não
+  existe" (`EntityNotFoundException`), em vez de mensagens próprias; a edição de perfil de um recrutador inexistente
+  responde 404.
 - `Database/linketinder.dbml`: valor `RECRUITER` em `person_type`, `person.address_id` opcional com o
   `CHECK person_address_required_check`, tabelas `recruitment_area`, `recruiter` e `recruiter_like` e nota da
   invariante `enterprise_like` ⇔ `recruiter_like`, garantida pelo serviço.

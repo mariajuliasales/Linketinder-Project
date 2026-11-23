@@ -81,6 +81,7 @@ Estado atual do código que a feature toca:
 - **Edição**
   - O recrutador pode editar a própria descrição e a própria senha.
   - A senha é opcional na atualização. Se vier preenchida, é validada.
+  - Recrutador inexistente → 404, com a mesma mensagem da remoção.
   - A edição existe no **service** (`RecruiterService`, com teste Spock) e no **front** (tela do próprio recrutador).
     **Não há rota na API**: o `POST /api/recruiters` é a única rota nova (seção 7).
 - **Validações** (400 `ValidationException`, salvo indicação):
@@ -120,8 +121,8 @@ Estado atual do código que a feature toca:
 
 **Casos de borda**
 
-- **Empresa tenta remover recrutador de outra empresa** → 404 "Recrutador não encontrado". A resposta não confirma que
-  o recrutador existe.
+- **Empresa tenta remover recrutador de outra empresa** → 404 "Recrutador com ID `<id>` não existe" (mesma mensagem de
+  um id inexistente). A resposta não confirma que o recrutador existe.
 - **Recrutador com id inexistente** → 404.
 - **E-mail igual ao de um candidato, empresa ou recrutador, mesmo com maiúsculas diferentes** (`Ana@X.com` × `ana@x.com`)
   → 409 "E-mail já cadastrado".
@@ -133,9 +134,11 @@ Estado atual do código que a feature toca:
 - **Área:**
   - com maiúsculas diferentes (`ti`) → aceita como `TI`;
   - fora da lista (`Jurídico`) → 400.
-- **Empresa inexistente no cadastro** (`enterpriseId` inválido na API) → 404 "Empresa não encontrada".
+- **Empresa inexistente no cadastro** (`enterpriseId` inválido na API) → 404 "Empresa com ID `<id>` não existe".
 - **Remoção de um recrutador que é o único a curtir C, enquanto outro recrutador curte D** → somem só o
   `enterprise_like(E, C)` e os matches de C. Os de D continuam.
+
+Os 404 usam o formato padrão do projeto, "`<Entidade>` com ID `<id>` não existe" (`EntityNotFoundException`).
 
 **Bug conhecido: e-mail único diferencia maiúsculas**
 
@@ -179,7 +182,7 @@ Estado atual do código que a feature toca:
   - C tem match com V1 de E e curtiu V2 de E sem match → nome e e-mail da empresa só em V1 (2.4).
 - **Vaga:**
   - curtir vaga `PAUSED` ou `CLOSED` → 400. Nada é salvo e nenhum match é criado;
-  - curtir vaga inexistente → 404 "Vaga não encontrada".
+  - curtir vaga inexistente → 404 "Vaga com ID `<id>` não existe".
 - **Curtidas repetidas ou inexistentes:**
   - curtir de novo a mesma vaga → nada muda e não há erro (idempotente);
   - descurtir uma vaga não curtida → nada muda e não há erro.
@@ -242,7 +245,7 @@ Estado atual do código que a feature toca:
 | B7 | R1 curte C de novo | Idempotente, sem erro e sem mudança | CA31 |
 | B8 | R1 descurte C que não curtia | Idempotente, sem erro e sem mudança | CA31 |
 | B9 | R1 curte C com o mesmo CPF de R1 | 400, nada salvo | CA32 |
-| B10 | R1 curte candidato inexistente | 404 "Candidato não encontrado" | CA31 |
+| B10 | R1 curte candidato inexistente | 404 "Candidato com ID `<id>` não existe" | CA31 |
 | B11 | C já tem match com V1 (E) e curte V4 (E, `OPEN`) | Curtida + match (C, V4) na mesma transação (2.2) | CA22 |
 | B12 | C descurte V1 com match | Só o match (C, V1) some. `enterprise_like(E, C)` e os outros matches continuam | CA25 |
 | B13 | E tem recrutadores de áreas TI e RH; R(RH) curte C, que curtiu vaga de TI | Match criado. A área não filtra | CA33 |
@@ -520,7 +523,7 @@ O recrutador não tem endereço. Ao candidato, **nenhum** dado do recrutador é 
   é 400 com a mensagem correspondente.
 - **CA13** — Dado um `enterpriseId` inexistente, quando se chama `POST /api/recruiters`, então a resposta é 404.
 - **CA14** — Dado um recrutador da empresa E1, quando a empresa E2 tenta removê-lo, então a resposta é 404 "Recrutador
-  não encontrado" e nada é apagado.
+  com ID `<id>` não existe", igual à de um id inexistente, e nada é apagado.
 - **CA15** — Dado o recrutador R1, único de E a curtir C, com C tendo match com V1 de E, quando E remove R1, então
   somem, na mesma transação, R1, `recruiter_like(R1, C)`, `enterprise_like(E, C)` e o match (C, V1) (B15).
 - **CA16** — Dado R1 e R2 de E curtindo C, com match (C, V1), quando E remove R1, então `enterprise_like(E, C)` e o
@@ -575,8 +578,8 @@ O recrutador não tem endereço. Ao candidato, **nenhum** dado do recrutador é 
   - quando R2 descurte C em seguida, então somem, na mesma transação, `recruiter_like(R2, C)`, `enterprise_like(E, C)`
     e **todos** os matches de C com vagas de E (B5).
 - **CA31** — Dado R1 já curtindo C (ou não curtindo), quando R1 curte (ou descurte) C de novo, então nada muda e não há
-  erro (B7, B8). Dado um candidato inexistente, quando R1 tenta curti-lo, então a resposta é 404 "Candidato não
-  encontrado" (B10).
+  erro (B7, B8). Dado um candidato inexistente, quando R1 tenta curti-lo, então a resposta é 404 "Candidato com ID
+  `<id>` não existe" (B10).
 - **CA32** — Dado R1 com o mesmo CPF do candidato C, quando R1 tenta curtir C, então a resposta é 400 "Você não pode
   curtir o seu próprio perfil de candidato." e nada é salvo (B9).
 - **CA33** — Dado um recrutador de RH e uma vaga "de TI" curtida por C, quando o recrutador curte C, então o match é
