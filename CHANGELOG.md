@@ -9,6 +9,9 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Validação concluída (Etapa 8): [relatório](docs/specs/recrutador/validacao.md). 45 critérios OK, CA37 e CA38
+  falharam no banco real (`CandidateDAO#findAllByIds` com `Set`) e 6 dependem do roteiro manual no navegador. A
+  feature ainda não está pronta para o PR (#21).
 - Verificação manual do front no navegador (DOM, hover cards, `aria-*`/`data-*` e `localStorage`) e
   `Database/DER-Linketinder.png` regenerado, feitos pela desenvolvedora e registrados na T39 do plano. O checklist da
   feature (spec, seção 9) fica todo marcado (#21).
