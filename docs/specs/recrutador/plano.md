@@ -1110,14 +1110,29 @@ Checklist "Princípio do Anonimato" (skill, Etapa 6):
   (`Linketinder/src/main/groovy/com/mariajuliasales/dao/PersonDAO.groovy:104-111`, `loadRelations` dentro do laço),
   carregando as competências de todas as pessoas da listagem numa única consulta. Registrada na T19, onde o
   `findAllByIds` herda esse N+1.
-- **Arquivos envolvidos:** a definir na própria tarefa (`PersonDAO`, `CompetenceLinkDAO` e specs). Exige autorização,
-  porque o plano protege o comportamento do `PersonDAO`.
+- **Arquivos envolvidos:** alterar `main/dao/CompetenceLinkDAO.groovy` e `main/dao/PersonDAO.groovy`; criar
+  `test/dao/CompetenceLinkDAOSpec.groovy` e `test/dao/PersonDAOSpec.groovy`. Autorizada (2026-11-23) a mudança interna
+  no `PersonDAO#findWhere` e no `#loadRelations`. Os métodos públicos, o SQL das pessoas e o resultado (competências
+  por pessoa, ordenadas por nome, `[]` quando não há nenhuma) não mudam.
+  - **Conferido antes de implementar (2026-11-23):** todos os métodos públicos de leitura passam pelo `findWhere`
+    (`findAll`, e `findById`/`findByEmail` via `findFirstWhere`, no `PersonDAO`; `findByCpf`, `findByCompetence` e
+    `findAllByIds` no `CandidateDAO`; `findByCnpj` no `EnterpriseDAO`). O `loadRelations` só é chamado pelo
+    `findWhere` e pelo `super.loadRelations` do `EnterpriseDAO`. Por isso, o `loadRelations` da base ficou vazio, como
+    gancho para relações extras.
 - **Critérios de aceite cobertos:** nenhum (melhoria de desempenho)
 - **Como validar:** `./gradlew test`; listagens de candidatos e empresas com as mesmas competências de antes.
 - **Anonimato:** não se aplica (só carrega competências, que já são públicas).
 - **Depende de:** T19
 - **Commit sugerido:** `perf(dao): load person competences in a single query`
-- [ ] Concluída
+- **Resultado (2026-11-23):** o `CompetenceLinkDAO` ganhou o `findLinkedByOwners(connection, link, ownerIds)`, que
+  busca as competências de todos os donos numa única consulta (`IN` com um `?` por id distinto, ordenada por dono e
+  nome; sem ids, não consulta o banco). O `PersonDAO#findWhere` passa a chamá-lo uma vez por listagem e preenche
+  `competences` de cada pessoa (`[]` quando não há nenhuma). O `findLinked` continua, usado pelo `VacancyDAO`.
+  Testes: `CompetenceLinkDAOSpec` (consulta única, id repetido ligado uma só vez, sem consulta sem ids) e
+  `PersonDAOSpec` (consulta única no `findAll`, pessoa sem competências com `[]`, listagem vazia sem consulta, e
+  `findById`/`findByEmail` com competências ordenadas por nome). Encontrados outros dois N+1, fora do escopo:
+  registrados em T42 (`EnterpriseDAO`) e T43 (`VacancyDAO`). `./gradlew build` passou.
+- [x] Concluída
 
 ### T41 — Exclusão da empresa remove as pessoas dos recrutadores
 - **Camada:** back-end
@@ -1158,6 +1173,33 @@ Checklist "Princípio do Anonimato" (skill, Etapa 6):
 - **Depende de:** T38
 - **Commit sugerido:** `fix(recrutador): delete recruiter persons when the enterprise is deleted`
 - [x] Concluída
+
+### T42 — N+1 de vagas por empresa no `EnterpriseDAO`
+- **Camada:** back-end (fora do escopo da feature Recrutador; não bloqueia as outras tarefas)
+- **O que será feito:** eliminar a consulta de vagas por empresa em `EnterpriseDAO#loadRelations`
+  (`vacancyDAO.findByEnterprise` para cada empresa da listagem), carregando as vagas de todas as empresas numa única
+  consulta. Encontrado na T40. **Não implementar sem autorização:** o plano protege o comportamento do `EnterpriseDAO`.
+- **Arquivos envolvidos:** a definir na própria tarefa (`EnterpriseDAO`, `VacancyDAO` e specs).
+- **Critérios de aceite cobertos:** nenhum (melhoria de desempenho)
+- **Como validar:** `./gradlew test`; listagem de empresas com as mesmas vagas de antes.
+- **Anonimato:** a entidade `Vacancy` carrega `Vacancy.enterprise` (AGENTS.md 12); a mudança não pode fazer esses dados
+  chegarem a respostas.
+- **Depende de:** T40
+- **Commit sugerido:** `perf(dao): load enterprise vacancies in a single query`
+- [ ] Concluída
+
+### T43 — N+1 de competências por vaga no `VacancyDAO`
+- **Camada:** back-end (fora do escopo da feature Recrutador; não bloqueia as outras tarefas)
+- **O que será feito:** eliminar a consulta de competências por vaga em `VacancyDAO#findWhere`
+  (`competenceLinkDAO.findLinked` dentro do laço), usando o `CompetenceLinkDAO#findLinkedByOwners` criado na T40.
+  Encontrado na T40. **Não implementar sem autorização.**
+- **Arquivos envolvidos:** a definir na própria tarefa (`VacancyDAO` e specs).
+- **Critérios de aceite cobertos:** nenhum (melhoria de desempenho)
+- **Como validar:** `./gradlew test`; listagens de vagas com as mesmas competências de antes.
+- **Anonimato:** não se aplica (só carrega competências, que já são públicas).
+- **Depende de:** T40
+- **Commit sugerido:** `perf(dao): load vacancy competences in a single query`
+- [ ] Concluída
 
 ---
 

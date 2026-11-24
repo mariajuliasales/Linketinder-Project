@@ -1,6 +1,7 @@
 package com.mariajuliasales.dao
 
 import com.mariajuliasales.model.AbstractPerson
+import com.mariajuliasales.model.Competence
 import com.mariajuliasales.model.Person
 import com.mariajuliasales.model.PersonType
 import com.mariajuliasales.repository.PersonRepository
@@ -95,8 +96,8 @@ abstract class PersonDAO<T extends AbstractPerson> implements PersonRepository<T
 		personId != null && SqlExecutor.update(connection, 'DELETE FROM person WHERE id = ?', [personId]) > 0
 	}
 
+	/** Gancho para relações além das competências, que o findWhere carrega em lote. Vazio na base. */
 	protected void loadRelations(Connection connection, T person) {
-		person.competences = competenceLinkDAO.findLinked(connection, competenceLink, person.id)
 	}
 
 	protected static <P extends AbstractPerson> P mapPersonFields(P person, ResultSet row) {
@@ -112,7 +113,12 @@ abstract class PersonDAO<T extends AbstractPerson> implements PersonRepository<T
 		connectionManager.withConnection { Connection connection ->
 			String sql = "${selectSql} ${condition} ORDER BY ${tableName}.id"
 			List<T> people = SqlExecutor.query(connection, sql, parameters) { ResultSet row -> mapRow(row) }
-			people.each { T person -> loadRelations(connection, person) }
+			Map<Integer, List<Competence>> competencesByPerson =
+					competenceLinkDAO.findLinkedByOwners(connection, competenceLink, people*.id)
+			people.each { T person ->
+				person.competences = competencesByPerson[person.id] ?: []
+				loadRelations(connection, person)
+			}
 			people
 		}
 	}

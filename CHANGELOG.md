@@ -184,6 +184,14 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Back-end: as listagens de pessoas (`PersonDAO#findWhere`, base de `findAll`, `findById`, `findByEmail`, `findByCpf`,
+  `findByCompetence`, `findAllByIds` e `findByCnpj`) passam a carregar as competências de todas as pessoas numa única
+  consulta, pelo novo `CompetenceLinkDAO#findLinkedByOwners`, em vez de uma consulta por pessoa (N+1). O resultado não
+  muda: competências ordenadas por nome e `[]` para quem não tem nenhuma. O `loadRelations` da base fica vazio, como
+  gancho para relações extras, por mudança autorizada na T40. Novos testes em `CompetenceLinkDAOSpec` e
+  `PersonDAOSpec` (#21).
+- Plano do Recrutador: novas tarefas T42 (N+1 de vagas por empresa no `EnterpriseDAO`) e T43 (N+1 de competências por
+  vaga no `VacancyDAO`), encontradas na T40 e que só serão implementadas com autorização (#21).
 - Home do front (`pages/home.ts`): o passo "Dê match" perde o selo "em breve". O cadastro público
   (`pages/register.ts`) continua só com candidato e empresa, sem mudança (#21).
 - Tela de candidatos da empresa no front (`pages/candidates.ts`): passa a usar `listCandidateCardsForEnterprise()`
