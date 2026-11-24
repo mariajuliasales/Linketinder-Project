@@ -1,11 +1,13 @@
 package com.mariajuliasales.controller
 
+import com.mariajuliasales.dao.ConnectionManager
 import com.mariajuliasales.dto.request.AddressRequest
 import com.mariajuliasales.dto.request.EnterpriseRequest
 import com.mariajuliasales.dto.response.EnterpriseAnonymousResponse
 import com.mariajuliasales.dto.response.EnterpriseResponse
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.repository.EnterpriseRepository
+import com.mariajuliasales.repository.RecruiterRepository
 import com.mariajuliasales.service.EnterpriseService
 import com.mariajuliasales.service.validator.EnterpriseValidator
 import com.mariajuliasales.service.validator.PersonValidator
@@ -18,7 +20,8 @@ class EnterpriseControllerSpec extends Specification {
 
 	EnterpriseRepository enterpriseRepository = Mock()
 	EnterpriseController controller = new EnterpriseController(
-	new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator())))
+	new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator()),
+	Stub(RecruiterRepository), Stub(ConnectionManager)))
 
 	private static EnterpriseRequest request(String name = 'TechSolutions Brasil') {
 		new EnterpriseRequest(name, 'contato@techsolutions.com.br', '123456',

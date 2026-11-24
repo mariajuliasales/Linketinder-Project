@@ -13,7 +13,7 @@ const STAT_CARDS: [stat: keyof PlatformStats, label: string][] = [
 const STEPS: [title: string, text: string][] = [
   ['Crie sua conta', 'Cadastre-se como candidato ou empresa e marque as competências que você tem ou procura.'],
   ['Conheça sem preconceito', 'Candidatos veem as vagas sem saber a empresa; empresas veem os candidatos sem nome, só formação e competências.'],
-  ['Dê match <span class="badge text-bg-warning align-middle">em breve</span>', 'Quando o candidato curtir a vaga e a empresa curtir o candidato, os dois lados se conhecem de verdade.'],
+  ['Dê match','Quando o candidato curtir a vaga e a empresa curtir o candidato, os dois lados se conhecem de verdade.'],
 ];
 
 function statCard([stat, label]: [string, string]): string {

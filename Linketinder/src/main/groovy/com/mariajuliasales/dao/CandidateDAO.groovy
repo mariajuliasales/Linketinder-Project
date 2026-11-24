@@ -42,6 +42,17 @@ class CandidateDAO extends PersonDAO<Candidate> implements CandidateRepository {
 		findWhere(WHERE_HAS_COMPETENCE, [competenceName?.trim()])
 	}
 
+	/** Um ? por id (nunca concatena valores). A ordem vem do ORDER BY candidate.id do findWhere. */
+	@Override
+	List<Candidate> findAllByIds(Collection<Integer> ids) {
+		if (!ids) {
+			return []
+		}
+		List<Integer> distinctIds = ids.toUnique()
+		String placeholders = (['?'] * distinctIds.size()).join(', ')
+		findWhere("WHERE candidate.id IN (${placeholders})".toString(), distinctIds)
+	}
+
 	@Override
 	protected String getTableName() {
 		'candidate'

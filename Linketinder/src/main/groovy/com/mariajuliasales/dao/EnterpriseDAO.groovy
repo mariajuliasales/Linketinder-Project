@@ -2,6 +2,7 @@ package com.mariajuliasales.dao
 
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.model.PersonType
+import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.repository.EnterpriseRepository
 import com.mariajuliasales.util.DocumentNormalizer
 
@@ -76,8 +77,11 @@ class EnterpriseDAO extends PersonDAO<Enterprise> implements EnterpriseRepositor
 	}
 
 	@Override
-	protected void loadRelations(Connection connection, Enterprise enterprise) {
-		super.loadRelations(connection, enterprise)
-		vacancyDAO.findByEnterprise(connection, enterprise.id).each { enterprise.addVacancy(it) }
+	protected void loadRelations(Connection connection, List<Enterprise> enterprises) {
+		super.loadRelations(connection, enterprises)
+		Map<Integer, List<Vacancy>> vacanciesByEnterprise = vacancyDAO.findByEnterprises(connection, enterprises*.id)
+		enterprises.each { Enterprise enterprise ->
+			vacanciesByEnterprise[enterprise.id]?.each { Vacancy vacancy -> enterprise.addVacancy(vacancy) }
+		}
 	}
 }

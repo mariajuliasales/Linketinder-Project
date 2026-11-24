@@ -2,6 +2,7 @@ package com.mariajuliasales
 
 import com.mariajuliasales.api.CandidateServlet
 import com.mariajuliasales.api.EnterpriseServlet
+import com.mariajuliasales.api.RecruiterServlet
 import com.mariajuliasales.api.VacancyServlet
 import com.mariajuliasales.controller.Controllers
 import org.apache.catalina.Context
@@ -25,6 +26,9 @@ static void main(String[] args) {
 
 	Tomcat.addServlet(context, 'vacancies', new VacancyServlet(controllers.vacancies()))
 	context.addServletMappingDecoded('/api/vacancies', 'vacancies')
+
+	Tomcat.addServlet(context, 'recruiters', new RecruiterServlet(controllers.recruiters()))
+	context.addServletMappingDecoded('/api/recruiters', 'recruiters')
 
 	tomcat.start()
 	println 'API do Linketinder rodando em http://localhost:8080/api'

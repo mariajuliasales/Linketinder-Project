@@ -8,11 +8,16 @@ export const ROUTES = {
   vacancies: '#/vacancies',
   candidates: '#/candidates',
   myVacancies: '#/my-vacancies',
+  recruiters: '#/recruiters',
+  recruiterCandidates: '#/recruiter-candidates',
+  recruiterVacancies: '#/recruiter-vacancies',
+  recruiterProfile: '#/recruiter-profile',
 } as const;
 
 export const HOME_BY_TYPE: Record<PersonType, string> = {
   CANDIDATE: ROUTES.vacancies,
   ENTERPRISE: ROUTES.candidates,
+  RECRUITER: ROUTES.recruiterCandidates,
 };
 
 export function navigateTo(route: string): void {

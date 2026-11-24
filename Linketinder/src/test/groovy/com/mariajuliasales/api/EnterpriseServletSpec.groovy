@@ -1,9 +1,11 @@
 package com.mariajuliasales.api
 
 import com.mariajuliasales.controller.EnterpriseController
+import com.mariajuliasales.dao.ConnectionManager
 import com.mariajuliasales.exception.DuplicateEntityException
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.repository.EnterpriseRepository
+import com.mariajuliasales.repository.RecruiterRepository
 import com.mariajuliasales.service.EnterpriseService
 import com.mariajuliasales.service.validator.EnterpriseValidator
 import com.mariajuliasales.service.validator.PersonValidator
@@ -22,7 +24,8 @@ class EnterpriseServletSpec extends Specification {
 
 	EnterpriseRepository enterpriseRepository = Mock()
 	EnterpriseServlet servlet = new EnterpriseServlet(new EnterpriseController(
-	new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator()))))
+	new EnterpriseService(enterpriseRepository, new EnterpriseValidator(new PersonValidator()),
+	Stub(RecruiterRepository), Stub(ConnectionManager))))
 
 	StringWriter body = new StringWriter()
 	HttpServletResponse response = Mock()
