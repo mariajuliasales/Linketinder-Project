@@ -1200,14 +1200,43 @@ Checklist "Princípio do Anonimato" (skill, Etapa 6):
 - **O que será feito:** eliminar a consulta de vagas por empresa em `EnterpriseDAO#loadRelations`
   (`vacancyDAO.findByEnterprise` para cada empresa da listagem), carregando as vagas de todas as empresas numa única
   consulta. Encontrado na T40. **Não implementar sem autorização:** o plano protege o comportamento do `EnterpriseDAO`.
-- **Arquivos envolvidos:** a definir na própria tarefa (`EnterpriseDAO`, `VacancyDAO` e specs).
+- **Desbloqueio (2026-11-23): autorizado.** Exceção às regras de proteção do plano, válida só para esta tarefa: o
+  gancho `PersonDAO#loadRelations(Connection, T)` passa a ser `loadRelations(Connection, List<T> people)`, chamado
+  uma vez pelo `findWhere`, depois das competências. A assinatura antiga é removida (não ficam as duas). Na base ele
+  continua vazio. O SQL das pessoas, os métodos públicos e o resultado (vagas de cada empresa ordenadas por id, `[]`
+  quando não há nenhuma, `Vacancy.enterprise` apontando para a própria empresa) não mudam.
+  - **Conferido antes de implementar (2026-11-23):** a busca por `loadRelations` no repositório achou só a definição
+    na base (`PersonDAO`), a chamada no `PersonDAO#findWhere` e a sobrescrita no `EnterpriseDAO`. Nenhum outro
+    chamador nem outra sobrescrita.
+- **Arquivos envolvidos:**
+  - `main/dao/PersonDAO.groovy`: gancho `loadRelations` em lote (exceção acima);
+  - `main/dao/VacancyDAO.groovy`: novo `findByEnterprises(Connection, List<Integer> enterpriseIds)`, que devolve
+    `Map<Integer, List<Vacancy>>` numa única consulta (`WHERE v.enterprise_id IN (?, …)`, um `?` por id distinto,
+    `ORDER BY v.id`) e não consulta o banco quando não há ids. O `findByEnterprise(Connection, int)` deixa de ser
+    usado pelo `EnterpriseDAO`, mas é mantido porque o `findByEnterprise(int)` do repositório o chama. As competências
+    de cada vaga continuam com uma consulta por vaga (fica para a T43);
+  - `main/dao/EnterpriseDAO.groovy`: sobrescreve o gancho em lote (com `@Override`) e chama `findByEnterprises` uma vez;
+  - criar `test/dao/EnterpriseDAOSpec.groovy`: consulta única de vagas no `findAll` com várias empresas; empresa sem
+    vagas fica com `[]`; listagem vazia não consulta vagas; `findById`/`findByCnpj` continuam trazendo as vagas, e
+    cada vaga aponta para a mesma instância da empresa carregada (identidade, não só igualdade).
+- **Testes Spock:** os listados no `EnterpriseDAOSpec` acima; o `PersonDAOSpec`, o `CompetenceLinkDAOSpec` e os demais
+  continuam passando sem mudanças.
 - **Critérios de aceite cobertos:** nenhum (melhoria de desempenho)
-- **Como validar:** `./gradlew test`; listagem de empresas com as mesmas vagas de antes.
+- **Como validar:** `./gradlew test`; listagem de empresas com as mesmas vagas de antes, comparando a saída do console
+  antes e depois no banco descartável `linketinder_t42` (removido no fim).
 - **Anonimato:** a entidade `Vacancy` carrega `Vacancy.enterprise` (AGENTS.md 12); a mudança não pode fazer esses dados
   chegarem a respostas.
 - **Depende de:** T40
 - **Commit sugerido:** `perf(dao): load enterprise vacancies in a single query`
-- [ ] Concluída
+- **Resultado (2026-11-23):** o `PersonDAO#findWhere` chama o gancho `loadRelations(connection, people)` uma vez por
+  listagem, e a assinatura por pessoa foi removida. O `VacancyDAO` ganhou o `findByEnterprises(connection, ids)`, que
+  reaproveita o `findWhere` com `WHERE v.enterprise_id IN (?, …)` e agrupa as vagas por empresa. O `EnterpriseDAO`
+  sobrescreve o gancho com `@Override` e chama `findByEnterprises` uma vez, ligando cada vaga à empresa carregada por
+  `addVacancy`. Testes no `EnterpriseDAOSpec`: consulta única de vagas no `findAll`, empresa sem vagas com `[]`, listagem
+  vazia sem consulta de vagas, e `findById`/`findByCnpj` com cada `Vacancy.enterprise` sendo a mesma instância da
+  empresa. No `linketinder_t42` (seed, migrations e uma empresa sem vagas), a saída do console de "Listar empresas",
+  "Ver dados completos" e "Listar as vagas de uma empresa" ficou idêntica antes e depois. `./gradlew build` passou.
+- [x] Concluída
 
 ### T43 — N+1 de competências por vaga no `VacancyDAO`
 - **Camada:** back-end (fora do escopo da feature Recrutador; não bloqueia as outras tarefas)

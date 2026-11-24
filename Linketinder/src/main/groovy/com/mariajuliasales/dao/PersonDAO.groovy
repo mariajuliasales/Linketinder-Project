@@ -96,8 +96,11 @@ abstract class PersonDAO<T extends AbstractPerson> implements PersonRepository<T
 		personId != null && SqlExecutor.update(connection, 'DELETE FROM person WHERE id = ?', [personId]) > 0
 	}
 
-	/** Gancho para relações além das competências, que o findWhere carrega em lote. Vazio na base. */
-	protected void loadRelations(Connection connection, T person) {
+	/**
+	 * Gancho para relações além das competências. O findWhere chama uma vez por listagem, com todas as pessoas,
+	 * para a subclasse carregar as relações em lote. Vazio na base.
+	 */
+	protected void loadRelations(Connection connection, List<T> people) {
 	}
 
 	protected static <P extends AbstractPerson> P mapPersonFields(P person, ResultSet row) {
@@ -117,8 +120,8 @@ abstract class PersonDAO<T extends AbstractPerson> implements PersonRepository<T
 					competenceLinkDAO.findLinkedByOwners(connection, competenceLink, people*.id)
 			people.each { T person ->
 				person.competences = competencesByPerson[person.id] ?: []
-				loadRelations(connection, person)
 			}
+			loadRelations(connection, people)
 			people
 		}
 	}

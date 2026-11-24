@@ -190,6 +190,13 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Back-end: as listagens de empresas (`EnterpriseDAO`, base de `findAll`, `findById`, `findByEmail` e `findByCnpj`)
+  passam a carregar as vagas de todas as empresas numa única consulta, pelo novo `VacancyDAO#findByEnterprises`, em vez
+  de uma consulta por empresa (N+1). O gancho `PersonDAO#loadRelations` passa a receber a lista inteira de pessoas e é
+  chamado uma vez por listagem, por mudança autorizada na T42; a versão por pessoa foi removida. O resultado não muda:
+  vagas ordenadas por id, `[]` para a empresa sem vagas e cada vaga ligada à própria empresa. A saída do console ficou
+  idêntica antes e depois. Novo `EnterpriseDAOSpec`. As competências de cada vaga seguem com uma consulta por vaga
+  (T43) (#21).
 - Back-end: as listagens de pessoas (`PersonDAO#findWhere`, base de `findAll`, `findById`, `findByEmail`, `findByCpf`,
   `findByCompetence`, `findAllByIds` e `findByCnpj`) passam a carregar as competências de todas as pessoas numa única
   consulta, pelo novo `CompetenceLinkDAO#findLinkedByOwners`, em vez de uma consulta por pessoa (N+1). O resultado não

@@ -75,6 +75,17 @@ class VacancyDAO implements VacancyRepository {
 		findWhere(connection, WHERE_ENTERPRISE, [enterpriseId])
 	}
 
+	/** Vagas de várias empresas numa única consulta, agrupadas por empresa e ordenadas por id. Sem ids, não consulta. */
+	Map<Integer, List<Vacancy>> findByEnterprises(Connection connection, Collection<Integer> enterpriseIds) {
+		if (!enterpriseIds) {
+			return [:]
+		}
+		List<Integer> distinctIds = enterpriseIds.toUnique()
+		String placeholders = (['?'] * distinctIds.size()).join(', ')
+		List<Vacancy> vacancies = findWhere(connection, "WHERE v.enterprise_id IN (${placeholders})", distinctIds)
+		vacancies.groupBy { Vacancy vacancy -> vacancy.enterprise.id }
+	}
+
 	@Override
 	Vacancy update(Vacancy vacancy) {
 		connectionManager.withTransaction { Connection connection ->
