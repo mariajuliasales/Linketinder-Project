@@ -1039,7 +1039,28 @@ Banco descartável `linketinder_t38` (`reset+migrar`, removido no fim), API com 
 
 `./gradlew test` passou.
 
-- [ ] Concluída
+#### Nova execução da regressão, depois da T40 e da T41 (2026-11-23)
+
+Mesmo roteiro, no banco descartável `linketinder_t38` (`reset+migrar`, removido no fim), com a API e o console
+apontados para ele por `DB_URL`.
+
+| Fluxo | Resultado | Observação |
+|---|---|---|
+| `reset+migrar` | ok | Sem erro |
+| Curtidas e matches do seed | ok | 5 `candidate_like`, 4 `enterprise_like`, 4 `recruiter_like`, 3 matches (os mesmos da primeira execução) |
+| Contas antigas (senha `123456`) | ok no banco | `crypt` confere para a candidata, a empresa e os 5 recrutadores de exemplo. Login pela tela: pendente (front) |
+| `POST /api/candidates` | ok | 201 no válido (senha em bcrypt, resposta sem senha); 409 em e-mail e CPF repetidos; 400 em CPF inválido |
+| `POST /api/enterprises` | ok | 201 no válido; 409 em e-mail e CNPJ repetidos |
+| `POST /api/vacancies` | ok | 201 com `OPEN` e `PAUSED`; 404 com empresa inexistente; 400 sem competência |
+| Pausa e exclusão de vaga (console) | ok | Pausar a vaga 3 manteve o match dela (B17); excluir a vaga 10 funcionou |
+| Menu do console | ok | `main/view/` sem diferença em relação à `main`; a listagem de candidatos continua anônima |
+| Exclusão de candidato (console) | ok | — |
+| Exclusão de empresa (console) | ok | **Falha anterior corrigida pela T41.** Excluir a empresa 1 (3 recrutadores) não deixou `person` do tipo `RECRUITER` sem `recruiter`, e o e-mail de uma recrutadora dela foi cadastrado de novo em outra empresa (201) |
+| Fluxos no front | pendente | Ainda sem navegador automatizável na sessão do agente. Fica o roteiro manual da primeira execução. No código, `pages/candidates.ts` segue com "Candidato #N" e `pages/vacancies.ts` só mostra a empresa no card com match |
+
+`./gradlew test`, `./gradlew build` (CA47) e `npm run build` (CA48) passaram.
+
+- [x] Concluída
 
 ### T39 — Varredura de anonimato
 - **Camada:** todas

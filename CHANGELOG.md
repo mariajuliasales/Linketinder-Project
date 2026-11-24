@@ -9,6 +9,12 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Regressão dos fluxos antigos registrada em `docs/specs/recrutador/plano.md`, na T38, em duas execuções. A primeira
+  achou a `person` do recrutador órfã na exclusão da empresa, que virou a T41. A segunda, depois da T40 e da T41, passou
+  em tudo: `reset+migrar`, curtidas e os 3 matches do seed, senhas das contas antigas, `POST /api/candidates`,
+  `/api/enterprises` e `/api/vacancies` (201, 400, 404 e 409), pausa com o match mantido, exclusão de vaga, candidato e
+  empresa sem `person` órfã, e menu do console sem mudanças. `./gradlew build` (CA47) e `npm run build` (CA48)
+  passaram. Os fluxos no front ficaram como roteiro manual (#21).
 - Varredura de anonimato do Recrutador registrada em `docs/specs/recrutador/plano.md`, na T39, ponto a ponto da spec
   4.6: SQL novo sem `password_hash` nem `SELECT *`, nenhuma entidade serializada, nenhum log novo, `POST
   /api/recruiters` sem CPF e nascimento, `pages/` só com tipos anônimos, revelados ou `RecruiterSummary`, e nenhum dado
