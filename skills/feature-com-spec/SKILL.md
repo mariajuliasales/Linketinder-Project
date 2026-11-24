@@ -200,6 +200,8 @@ Se faltar algo, o ciclo se repete:
 - **Se a spec estiver errada, atualizar a spec antes do código.** Depois, atualizar o plano. Só então implementar.
 - **Bug encontrado fora do escopo:** não corrigir. Registrar na spec como "bug conhecido" e, se for o caso, escrever um teste do comportamento correto marcado como pendente (`@PendingFeature` do Spock), com um comentário explicando o bug.
 - **Relatar com honestidade:** se um teste falhar, mostrar a saída. Se uma validação não foi feita, dizer que não foi feita.
+- **Escolha não definida ou desvio é lacuna da spec.** Toda escolha que a spec não define, e todo desvio em relação a ela, é listado como lacuna da spec. Não declare "Não encontrei lacunas" se houver itens em "Dúvidas e desvios".
+- **"Como validar" usa o texto da interface.** Cite os textos exibidos na tela, não valores internos (enums, chaves de API), a menos que a validação seja de back-end.
 
 ## 5. Modelos
 

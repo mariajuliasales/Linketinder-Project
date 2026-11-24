@@ -4,6 +4,8 @@ import com.mariajuliasales.model.Address
 import com.mariajuliasales.model.Candidate
 import com.mariajuliasales.model.Competence
 import com.mariajuliasales.model.Enterprise
+import com.mariajuliasales.model.Recruiter
+import com.mariajuliasales.model.RecruitmentArea
 import com.mariajuliasales.model.Vacancy
 
 import java.time.LocalDate
@@ -25,6 +27,12 @@ final class TestData {
 		new Enterprise([id: 1, name: "TechSolutions Brasil", email: "contato@techsolutions.com.br", password: "123456",
 			address: validAddress(), description: "Desenvolvimento de software sob medida",
 			competences: [new Competence("Java")], cnpj: "11.222.333/0001-81"] + changes)
+	}
+
+	static Recruiter validRecruiter(Map changes = [:]) {
+		new Recruiter([id: 1, name: "Rafael Teixeira Lopes", email: "rafael.lopes@techsolutions.com.br",
+			password: "123456", description: "Recrutador de tecnologia", enterpriseId: 1,
+			area: RecruitmentArea.IT, cpf: "301.958.476-01", birthDate: LocalDate.of(1988, 9, 3)] + changes)
 	}
 
 	static Vacancy validVacancy(Map changes = [:]) {

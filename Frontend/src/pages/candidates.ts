@@ -1,12 +1,12 @@
 import { requireLoggedEnterprise } from './guards';
-import { listAnonymousCandidates, rankCompetencesByCandidates } from '../services/candidates';
+import { listCandidateCardsForEnterprise, rankCompetencesByCandidates } from '../services/candidates';
 import { countMatchingCompetences } from '../services/matching';
 import { card, createElement } from '../ui/dom';
-import { competenceBadges, lockedInfo } from '../ui/badges';
+import { badge, competenceBadges, lockedInfo } from '../ui/badges';
 import { attachHoverCard } from '../ui/hoverCard';
 import { barChart } from '../ui/barChart';
 import type { BarChartEntry } from '../ui/barChart';
-import type { CandidateAnonymous, Enterprise } from '../types';
+import type { CandidateAnonymous, CandidateCard, Enterprise } from '../types';
 
 const TABLE_HEADER = '<thead><tr><th>Candidato</th><th>Formação</th><th>Descrição</th><th>Competências</th></tr></thead>';
 
@@ -14,7 +14,8 @@ function candidateLabel(position: number): string {
   return `Candidato #${position}`;
 }
 
-function describeCandidate(candidate: CandidateAnonymous, position: number, enterprise: Enterprise): HTMLElement {
+// O hover card não mostra dados pessoais, nem com match: nome e e-mail ficam só na linha da tabela
+function describeCandidate(candidate: CandidateCard, position: number, enterprise: Enterprise): HTMLElement {
   const matches = countMatchingCompetences(enterprise.competences, candidate.competences);
   const details = createElement('div');
   details.append(
@@ -23,17 +24,33 @@ function describeCandidate(candidate: CandidateAnonymous, position: number, ente
     createElement('p', 'mb-2', `Descrição: ${candidate.description || '—'}`),
     createElement('p', 'mb-1', `Tem ${matches} de ${enterprise.competences.length} competências que sua empresa busca:`),
     ...competenceBadges(candidate.competences, enterprise.competences),
-    lockedInfo('Nome e contato revelados após o match'),
+    candidate.reveal
+      ? createElement('p', 'small text-body-secondary mt-2 mb-0', 'Match com sua empresa: nome e contato na tabela')
+      : lockedInfo('Nome e contato revelados após o match'),
   );
   return details;
 }
 
-function candidateRow(candidate: CandidateAnonymous, position: number, enterprise: Enterprise): HTMLTableRowElement {
+// Sem match, "Candidato #N" pela posição; o nome e o e-mail só existem no card com reveal (match com a empresa)
+function nameCell(candidate: CandidateCard, position: number): HTMLTableCellElement {
+  if (!candidate.reveal) {
+    return createElement('td', 'fw-semibold text-nowrap', candidateLabel(position));
+  }
+  const cell = createElement('td', 'fw-semibold text-nowrap', candidate.reveal.name);
+  cell.append(
+    createElement('div', 'small fw-normal text-body-secondary', candidate.reveal.email),
+    badge('Match', 'text-bg-success mt-1'),
+  );
+  return cell;
+}
+
+// A empresa não curte candidatos (CA36): a linha não tem botão de curtir
+function candidateRow(candidate: CandidateCard, position: number, enterprise: Enterprise): HTMLTableRowElement {
   const competencesCell = createElement('td');
   competencesCell.append(...competenceBadges(candidate.competences));
   const row = createElement('tr');
   row.append(
-    createElement('td', 'fw-semibold text-nowrap', candidateLabel(position)),
+    nameCell(candidate, position),
     createElement('td', '', candidate.training),
     createElement('td', '', candidate.description || '—'),
     competencesCell,
@@ -42,7 +59,7 @@ function candidateRow(candidate: CandidateAnonymous, position: number, enterpris
   return row;
 }
 
-function candidatesTable(candidates: CandidateAnonymous[], enterprise: Enterprise): HTMLElement {
+function candidatesTable(candidates: CandidateCard[], enterprise: Enterprise): HTMLElement {
   const table = createElement('table', 'table table-striped align-middle mb-0');
   table.innerHTML = TABLE_HEADER;
   const body = createElement('tbody');
@@ -78,7 +95,8 @@ export function candidatesPage(): HTMLElement {
     return page;
   }
 
-  const candidates = listAnonymousCandidates();
+  // A junção anônimo × revelado é feita no serviço (T28): cada card traz reveal só se houver match com a empresa
+  const candidates = listCandidateCardsForEnterprise();
   page.append(
     createElement('h1', 'h3', `Olá, ${enterprise.name}`),
     createElement('p', 'text-body-secondary',

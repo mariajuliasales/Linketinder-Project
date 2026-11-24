@@ -1,29 +1,56 @@
 import * as storage from '../data/storage';
+import { removeWhere } from '../data/storage';
 import { listOwnVacancies } from './vacancies';
-import type { Account, Candidate, Enterprise } from '../types';
+import type { Account, Candidate, Enterprise, Recruiter } from '../types';
 
 function allAccounts(): Account[] {
-  return [...storage.candidates.getAll(), ...storage.enterprises.getAll()];
+  return [...storage.candidates.getAll(), ...storage.enterprises.getAll(), ...storage.recruiters.getAll()];
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
 }
 
 function isSameEmail(first: string, second: string): boolean {
-  return first.toLowerCase() === second.toLowerCase();
+  return normalizeEmail(first) === normalizeEmail(second);
 }
 
 function startSession(account: Account): void {
   storage.session.set({ type: account.type, id: account.id });
 }
 
-function removeEnterpriseWithVacancies(enterprise: Enterprise): void {
-  listOwnVacancies(enterprise).forEach((vacancy) => storage.vacancies.remove(vacancy.id));
+// Espelha o ON DELETE CASCADE do banco: recrutadores, curtidas e matches ligados à empresa e às vagas dela
+function removeEnterpriseWithDependents(enterprise: Enterprise): void {
+  const vacancyIds = new Set(listOwnVacancies(enterprise).map((vacancy) => vacancy.id));
+  const recruiterIds = new Set(
+    storage.recruiters.getAll()
+      .filter((recruiter) => recruiter.enterpriseId === enterprise.id)
+      .map((recruiter) => recruiter.id),
+  );
+  removeWhere(storage.matches, (match) => vacancyIds.has(match.vacancyId));
+  removeWhere(storage.candidateLikes, (like) => vacancyIds.has(like.vacancyId));
+  removeWhere(storage.recruiterLikes, (like) => recruiterIds.has(like.recruiterId));
+  removeWhere(storage.enterpriseLikes, (like) => like.enterpriseId === enterprise.id);
+  removeWhere(storage.recruiters, (recruiter) => recruiterIds.has(recruiter.id));
+  removeWhere(storage.vacancies, (vacancy) => vacancyIds.has(vacancy.id));
   storage.enterprises.remove(enterprise.id);
+}
+
+// Espelha o ON DELETE CASCADE do banco: curtidas feitas e recebidas e matches do candidato
+function removeCandidateWithDependents(candidate: Candidate): void {
+  removeWhere(storage.matches, (match) => match.candidateId === candidate.id);
+  removeWhere(storage.candidateLikes, (like) => like.candidateId === candidate.id);
+  removeWhere(storage.recruiterLikes, (like) => like.candidateId === candidate.id);
+  removeWhere(storage.enterpriseLikes, (like) => like.candidateId === candidate.id);
+  storage.candidates.remove(candidate.id);
 }
 
 export function isEmailInUse(email: string): boolean {
   return allAccounts().some((account) => isSameEmail(account.email, email));
 }
 
-export function register(account: Account): void {
+// Só candidato e empresa: o recrutador é cadastrado pela empresa, sem iniciar sessão
+export function register(account: Candidate | Enterprise): void {
   if (account.type === 'CANDIDATE') {
     storage.candidates.add(account);
   } else {
@@ -62,13 +89,22 @@ export function getLoggedEnterprise(): Enterprise | undefined {
   return account?.type === 'ENTERPRISE' ? account : undefined;
 }
 
+export function getLoggedRecruiter(): Recruiter | undefined {
+  const account = getLoggedAccount();
+  return account?.type === 'RECRUITER' ? account : undefined;
+}
+
 export function deleteLoggedAccount(): void {
   const account = getLoggedAccount();
+  // O recrutador não exclui a própria conta: quem o remove é a empresa (T27)
+  if (account?.type === 'RECRUITER') {
+    throw new Error('Recrutador não pode excluir a própria conta.');
+  }
   if (account?.type === 'CANDIDATE') {
-    storage.candidates.remove(account.id);
+    removeCandidateWithDependents(account);
   }
   if (account?.type === 'ENTERPRISE') {
-    removeEnterpriseWithVacancies(account);
+    removeEnterpriseWithDependents(account);
   }
   logout();
 }

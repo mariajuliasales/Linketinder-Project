@@ -1,6 +1,7 @@
 package com.mariajuliasales.dao
 
 import com.mariajuliasales.model.AbstractPerson
+import com.mariajuliasales.model.Competence
 import com.mariajuliasales.model.Person
 import com.mariajuliasales.model.PersonType
 import com.mariajuliasales.repository.PersonRepository
@@ -88,8 +89,18 @@ abstract class PersonDAO<T extends AbstractPerson> implements PersonRepository<T
 		}
 	}
 
-	protected void loadRelations(Connection connection, T person) {
-		person.competences = competenceLinkDAO.findLinked(connection, competenceLink, person.id)
+	/** Igual ao delete(int), mas na transação de quem chama: não abre, não confirma nem fecha a conexão. */
+	@Override
+	boolean delete(Connection connection, int id) {
+		Integer personId = findPersonId(connection, id)
+		personId != null && SqlExecutor.update(connection, 'DELETE FROM person WHERE id = ?', [personId]) > 0
+	}
+
+	/**
+	 * Gancho para relações além das competências. O findWhere chama uma vez por listagem, com todas as pessoas,
+	 * para a subclasse carregar as relações em lote. Vazio na base.
+	 */
+	protected void loadRelations(Connection connection, List<T> people) {
 	}
 
 	protected static <P extends AbstractPerson> P mapPersonFields(P person, ResultSet row) {
@@ -105,7 +116,12 @@ abstract class PersonDAO<T extends AbstractPerson> implements PersonRepository<T
 		connectionManager.withConnection { Connection connection ->
 			String sql = "${selectSql} ${condition} ORDER BY ${tableName}.id"
 			List<T> people = SqlExecutor.query(connection, sql, parameters) { ResultSet row -> mapRow(row) }
-			people.each { T person -> loadRelations(connection, person) }
+			Map<Integer, List<Competence>> competencesByPerson =
+					competenceLinkDAO.findLinkedByOwners(connection, competenceLink, people*.id)
+			people.each { T person ->
+				person.competences = competencesByPerson[person.id] ?: []
+			}
+			loadRelations(connection, people)
 			people
 		}
 	}

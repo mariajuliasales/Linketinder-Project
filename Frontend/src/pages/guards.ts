@@ -1,6 +1,6 @@
-import { getLoggedCandidate, getLoggedEnterprise } from '../services/auth';
+import { getLoggedCandidate, getLoggedEnterprise, getLoggedRecruiter } from '../services/auth';
 import { ROUTES, navigateTo } from '../navigation';
-import type { Candidate, Enterprise } from '../types';
+import type { Candidate, Enterprise, Recruiter } from '../types';
 
 function redirectToLoginIfMissing<T>(account: T | undefined): T | undefined {
   if (!account) {
@@ -15,4 +15,8 @@ export function requireLoggedCandidate(): Candidate | undefined {
 
 export function requireLoggedEnterprise(): Enterprise | undefined {
   return redirectToLoginIfMissing(getLoggedEnterprise());
+}
+
+export function requireLoggedRecruiter(): Recruiter | undefined {
+  return redirectToLoginIfMissing(getLoggedRecruiter());
 }

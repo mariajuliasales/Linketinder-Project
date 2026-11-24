@@ -1,5 +1,6 @@
 package com.mariajuliasales.dao
 
+import com.mariajuliasales.model.Competence
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.model.VacancyStatus
@@ -75,6 +76,17 @@ class VacancyDAO implements VacancyRepository {
 		findWhere(connection, WHERE_ENTERPRISE, [enterpriseId])
 	}
 
+	/** Vagas de várias empresas numa única consulta, agrupadas por empresa e ordenadas por id. Sem ids, não consulta. */
+	Map<Integer, List<Vacancy>> findByEnterprises(Connection connection, Collection<Integer> enterpriseIds) {
+		if (!enterpriseIds) {
+			return [:]
+		}
+		List<Integer> distinctIds = enterpriseIds.toUnique()
+		String placeholders = (['?'] * distinctIds.size()).join(', ')
+		List<Vacancy> vacancies = findWhere(connection, "WHERE v.enterprise_id IN (${placeholders})", distinctIds)
+		vacancies.groupBy { Vacancy vacancy -> vacancy.enterprise.id }
+	}
+
 	@Override
 	Vacancy update(Vacancy vacancy) {
 		connectionManager.withTransaction { Connection connection ->
@@ -122,8 +134,10 @@ class VacancyDAO implements VacancyRepository {
 		List<Vacancy> vacancies = SqlExecutor.query(connection, sql, parameters) { ResultSet row ->
 			mapRow(row, enterprisesById)
 		}
+		Map<Integer, List<Competence>> competencesByVacancy =
+				competenceLinkDAO.findLinkedByOwners(connection, CompetenceLink.VACANCY, vacancies*.id)
 		vacancies.each { Vacancy vacancy ->
-			vacancy.competences = competenceLinkDAO.findLinked(connection, CompetenceLink.VACANCY, vacancy.id)
+			vacancy.competences = competencesByVacancy[vacancy.id] ?: []
 		}
 		vacancies
 	}
