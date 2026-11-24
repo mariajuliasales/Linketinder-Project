@@ -1098,7 +1098,7 @@ Leitura do diff `main...HEAD` em `Linketinder/src/main` e `Frontend/src`. Sem ba
 | Atributos e hover cards (código) | ok | `aria-label`/`aria-pressed` usam só "Candidato #N", título da vaga e o nome do recrutador (na tela da própria empresa). Nenhum `data-*`. `innerHTML` só com cabeçalhos fixos. Hover card da vaga sem match mostra "revelados após o match". CPF e nascimento só aparecem como campos do formulário de cadastro de recrutador, que é recriado vazio após o envio |
 | Mensagens de erro | ok | As telas novas ou alteradas (`recruiters`, `recruiterCandidates`, `recruiterVacancies`, `recruiterProfile`, `vacancies`) trocam o 404 com id interno por mensagem genérica. 409 de e-mail no cadastro de recrutador: limitação aceita (AGENTS.md 12) |
 | Candidato sem dado de recrutador | ok | `pages/vacancies.ts` não importa nada de `services/recruiters` nem de recrutador; `LikedVacancyCard` só tem nome e e-mail da empresa |
-| DOM, hover cards e `aria-*`/`data-*` no DevTools (candidato, empresa e recrutador, antes e depois do match) | **pendente (manual)** | Sem navegador automatizável na sessão do agente. Roteiro para a desenvolvedora abaixo |
+| DOM, hover cards e `aria-*`/`data-*` no DevTools (candidato, empresa e recrutador, antes e depois do match) | ok (manual) | Sem navegador automatizável na sessão do agente. Roteiro abaixo, executado pela desenvolvedora (2026-11-23) |
 
 Roteiro manual (com o `localStorage` limpo, senha `123456`):
 1. Candidata `mariajuliasales@gmail.com`, tela de vagas: nenhuma vaga ou hover card mostra empresa, `enterpriseId` ou
@@ -1118,8 +1118,8 @@ Checklist "Princípio do Anonimato" (skill, Etapa 6):
 - [x] Depois do match, só os dados permitidos no AGENTS.md são revelados
 - [x] Há testes que verificam a AUSÊNCIA de dados sensíveis nas respostas
 - [x] Logs e mensagens de erro não expõem dados pessoais
-- [ ] Front: verificação manual no navegador e no `localStorage` (pendente: roteiro acima)
-- [ ] DER regenerado (manual, pela desenvolvedora)
+- [x] Front: verificação manual no navegador e no `localStorage` (feita pela desenvolvedora, 2026-11-23)
+- [x] DER regenerado (manual, pela desenvolvedora)
 
 `./gradlew test` e `npm run build` passaram.
 

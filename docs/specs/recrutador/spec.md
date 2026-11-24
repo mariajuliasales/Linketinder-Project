@@ -819,18 +819,17 @@ para apresentar a ele; se alguma decisão mudar, a spec é atualizada antes do c
 
 ## 9. Checklist da feature (AGENTS.md › Fluxo de trabalho com IA)
 
-- [ ] testes Spock cobrindo as regras novas, incluindo os casos B1–B17 e a ausência de dados nos `*MapperSpec`;
-- [ ] anonimato conferido nos pontos da seção 4.6 (AGENTS.md › Onde o anonimato costuma vazar);
-- [ ] mudança de schema: migrations novas e idempotentes em `Database/migrations/` (001, 002, 003);
-- [ ] mudança de schema: `Database/linketinder.dbml` atualizado;
-- [ ] mudança de schema: `Database/DER-Linketinder.png` regenerado **manualmente pela desenvolvedora** (o agente deixa
-  este item aberto);
-- [ ] seed do front (`Frontend/src/data/seed.ts`) alinhado ao `seed.sql` + migrations (recrutadores, curtidas e
+- [x] testes Spock cobrindo as regras novas, incluindo os casos B1–B17 e a ausência de dados nos `*MapperSpec`;
+- [x] anonimato conferido nos pontos da seção 4.6 (AGENTS.md › Onde o anonimato costuma vazar);
+- [x] mudança de schema: migrations novas e idempotentes em `Database/migrations/` (001, 002, 003);
+- [x] mudança de schema: `Database/linketinder.dbml` atualizado;
+- [x] mudança de schema: `Database/DER-Linketinder.png` regenerado **manualmente pela desenvolvedora**;
+- [x] seed do front (`Frontend/src/data/seed.ts`) alinhado ao `seed.sql` + migrations (recrutadores, curtidas e
   matches), com `DATA_FORMAT_VERSION` incrementado;
-- [ ] `AGENTS.md` atualizado (seções 4.2, 6, 7, 8, 11 e 12);
-- [ ] `docs/api.md` com `POST /api/recruiters`;
-- [ ] `CHANGELOG.md` atualizado em `[Não lançado]`;
-- [ ] `./gradlew build` e `npm run build` passando.
+- [x] `AGENTS.md` atualizado (seções 4.2, 6, 7, 8, 11 e 12);
+- [x] `docs/api.md` com `POST /api/recruiters`;
+- [x] `CHANGELOG.md` atualizado em `[Não lançado]`;
+- [x] `./gradlew build` e `npm run build` passando.
 
 ---
 

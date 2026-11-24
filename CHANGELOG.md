@@ -9,6 +9,9 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Adicionado
 
+- Verificação manual do front no navegador (DOM, hover cards, `aria-*`/`data-*` e `localStorage`) e
+  `Database/DER-Linketinder.png` regenerado, feitos pela desenvolvedora e registrados na T39 do plano. O checklist da
+  feature (spec, seção 9) fica todo marcado (#21).
 - Regressão dos fluxos antigos registrada em `docs/specs/recrutador/plano.md`, na T38, em duas execuções. A primeira
   achou a `person` do recrutador órfã na exclusão da empresa, que virou a T41. A segunda, depois da T40 e da T41, passou
   em tudo: `reset+migrar`, curtidas e os 3 matches do seed, senhas das contas antigas, `POST /api/candidates`,
