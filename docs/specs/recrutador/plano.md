@@ -1243,13 +1243,40 @@ Checklist "Princípio do Anonimato" (skill, Etapa 6):
 - **O que será feito:** eliminar a consulta de competências por vaga em `VacancyDAO#findWhere`
   (`competenceLinkDAO.findLinked` dentro do laço), usando o `CompetenceLinkDAO#findLinkedByOwners` criado na T40.
   Encontrado na T40. **Não implementar sem autorização.**
-- **Arquivos envolvidos:** a definir na própria tarefa (`VacancyDAO` e specs).
+- **Desbloqueio (2026-11-23): autorizado.** O `VacancyDAO#findWhere` (privado) deixa de chamar
+  `competenceLinkDAO.findLinked` por vaga e passa a chamar `findLinkedByOwners(connection, CompetenceLink.VACANCY,
+  vacancies*.id)` uma vez por listagem, preenchendo `competences` de cada vaga (`[]` quando não há nenhuma). O SQL das
+  vagas, os métodos públicos e o resultado (competências ordenadas por nome, `Vacancy.enterprise` inalterado) não mudam.
+  O `CompetenceLinkDAO#findLinked` é removido, pois fica sem chamadores.
+  - **Conferido antes de implementar (2026-11-23):** a busca por `findLinked` (sem contar o `findLinkedByOwners`) no
+    repositório achou só a definição no `CompetenceLinkDAO`, a chamada no `VacancyDAO.groovy:137` e uma menção no
+    resultado da T40 neste plano. Nenhum teste o chama. Todos os caminhos de leitura do `VacancyDAO` (`findAll`,
+    `findById`, `findByEnterprise(int)`, `findByEnterprise(Connection, int)` e `findByEnterprises`, da T42) passam pelo
+    `findWhere`, então a consulta única de competências vale para todos.
+- **Arquivos envolvidos:**
+  - `main/dao/VacancyDAO.groovy`: `findWhere` com a consulta única de competências;
+  - `main/dao/CompetenceLinkDAO.groovy`: remoção do `findLinked`;
+  - criar `test/dao/VacancyDAOSpec.groovy`: consulta única de competências no `findAll` com várias vagas; vaga sem
+    competências fica com `[]`; listagem vazia não consulta competências; `findById` e `findByEnterprise` continuam
+    trazendo as competências ordenadas por nome;
+  - `test/dao/EnterpriseDAOSpec.groovy`: a contagem de consultas de `vacancy_competence` passa a ser `1 *` (e `0 *`
+    quando não há vagas), e o comentário "fica para a T43" sai.
 - **Critérios de aceite cobertos:** nenhum (melhoria de desempenho)
-- **Como validar:** `./gradlew test`; listagens de vagas com as mesmas competências de antes.
+- **Como validar:** `./gradlew test`; no banco descartável `linketinder_t43` (removido no fim), a saída do console de
+  "Listar vagas", "Listar as vagas de uma empresa" e "Listar empresas" fica idêntica antes e depois.
 - **Anonimato:** não se aplica (só carrega competências, que já são públicas).
 - **Depende de:** T40
 - **Commit sugerido:** `perf(dao): load vacancy competences in a single query`
-- [ ] Concluída
+- **Resultado (2026-11-23):** o `VacancyDAO#findWhere` chama o `findLinkedByOwners` uma vez por listagem e preenche
+  `competences` de cada vaga (`[]` quando não há nenhuma). Como todos os caminhos de leitura passam pelo `findWhere`, o
+  `findByEnterprises` não precisou de mudança própria, e a listagem de empresas fica com uma única consulta de
+  competências de vagas. O `CompetenceLinkDAO#findLinked` foi removido. Testes no `VacancyDAOSpec`: consulta única no
+  `findAll`, vaga sem competências com `[]`, listagem vazia sem consulta, `findById`, as duas versões de
+  `findByEnterprise` e `findByEnterprises` com uma consulta de competências. No `EnterpriseDAOSpec`, `1 *` consulta de
+  `vacancy_competence` com vagas e `0 *` sem vagas. No `linketinder_t43` (seed, migrations e uma vaga sem
+  competências), a saída do console de "Listar todas as vagas", "Listar as vagas de uma empresa" (empresas 1 a 6) e
+  "Listar empresas" ficou idêntica antes e depois; o banco foi removido. `./gradlew test` passou (512 testes).
+- [x] Concluída
 
 ---
 

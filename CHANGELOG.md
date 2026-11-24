@@ -190,6 +190,12 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
 
 ### Modificado
 
+- Back-end: as listagens de vagas (`VacancyDAO#findWhere`, base de `findAll`, `findById`, `findByEnterprise` e
+  `findByEnterprises`) passam a carregar as competências de todas as vagas numa única consulta, pelo
+  `CompetenceLinkDAO#findLinkedByOwners`, em vez de uma consulta por vaga (N+1). Com a T42, a listagem de empresas fica
+  com uma consulta de competências de vagas, e não uma por vaga. O resultado não muda: competências ordenadas por nome
+  e `[]` para a vaga sem nenhuma. A saída do console ficou idêntica antes e depois. Novo `VacancyDAOSpec`, e o
+  `EnterpriseDAOSpec` passa a exigir uma única consulta de competências de vagas (#21).
 - Back-end: as listagens de empresas (`EnterpriseDAO`, base de `findAll`, `findById`, `findByEmail` e `findByCnpj`)
   passam a carregar as vagas de todas as empresas numa única consulta, pelo novo `VacancyDAO#findByEnterprises`, em vez
   de uma consulta por empresa (N+1). O gancho `PersonDAO#loadRelations` passa a receber a lista inteira de pessoas e é
@@ -252,6 +258,10 @@ entrada em `[Não lançado]`, conforme a skill `skills/feature-com-spec/SKILL.md
   pessoas dos recrutadores e depois a empresa, com rollback em caso de erro. Para isso, o `PersonDAO` ganhou o
   `delete(Connection, int)`, por exceção autorizada na T41; o `delete(int)` não mudou. Encontrado na regressão da
   T38 (spec 2.1, CA53) (#21).
+
+### Removido
+
+- Back-end: `CompetenceLinkDAO#findLinked`, que ficou sem chamadores depois da T43 (#21).
 
 ## [0.1.0] - 2026-11-04
 

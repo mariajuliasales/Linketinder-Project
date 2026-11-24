@@ -24,16 +24,6 @@ class CompetenceLinkDAO {
 		}
 	}
 
-	List<Competence> findLinked(Connection connection, CompetenceLink link, int ownerId) {
-		String sql = """
-                SELECT co.id, co.name
-                FROM ${link.table} owner_link
-                JOIN competence co ON co.id = owner_link.competence_id
-                WHERE owner_link.${link.ownerColumn} = ?
-                ORDER BY co.name"""
-		SqlExecutor.query(connection, sql, [ownerId]) { ResultSet row -> CompetenceDAO.mapRow(row) }
-	}
-
 	/**
 	 * Competências de vários donos numa única consulta, ordenadas por nome. Um ? por id (nunca concatena valores).
 	 * Donos sem competência não aparecem no mapa; sem ids, não consulta o banco.

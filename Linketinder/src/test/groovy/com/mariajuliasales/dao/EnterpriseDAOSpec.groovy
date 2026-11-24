@@ -49,7 +49,6 @@ class EnterpriseDAOSpec extends Specification {
 		sql.contains('FROM vacancy v')
 	}
 
-	// As competências de cada vaga ainda são lidas uma vez por vaga (fica para a T43)
 	private static boolean isVacancyCompetenceQuery(String sql) {
 		sql.contains('FROM vacancy_competence owner_link')
 	}
@@ -78,7 +77,9 @@ class EnterpriseDAOSpec extends Specification {
 		1 * vacancyStatement.setObject(1, 1)
 		1 * vacancyStatement.setObject(2, 2)
 		1 * vacancyStatement.setObject(3, 3)
-		3 * connection.prepareStatement({ isVacancyCompetenceQuery(it) }) >> vacancyCompetenceStatement
+		1 * connection.prepareStatement({ String sql ->
+			isVacancyCompetenceQuery(sql) && sql.contains('owner_link.vacancy_id IN (?, ?, ?)')
+		}) >> vacancyCompetenceStatement
 		0 * connection.prepareStatement(_)
 		enterprises*.id == [1, 2, 3]
 		enterprises[0].vacancies*.id == [10, 12]
@@ -99,6 +100,7 @@ class EnterpriseDAOSpec extends Specification {
 		1 * connection.prepareStatement({ isEnterpriseQuery(it) }) >> enterpriseStatement
 		1 * connection.prepareStatement({ isEnterpriseCompetenceQuery(it) }) >> competenceStatement
 		1 * connection.prepareStatement({ isVacancyQuery(it) }) >> vacancyStatement
+		0 * connection.prepareStatement({ isVacancyCompetenceQuery(it) })
 		enterprises.size() == 1
 		enterprises[0].vacancies == []
 	}
@@ -114,6 +116,7 @@ class EnterpriseDAOSpec extends Specification {
 		1 * connection.prepareStatement({ isEnterpriseQuery(it) }) >> enterpriseStatement
 		0 * connection.prepareStatement({ isVacancyQuery(it) })
 		0 * connection.prepareStatement({ isEnterpriseCompetenceQuery(it) })
+		0 * connection.prepareStatement({ isVacancyCompetenceQuery(it) })
 		enterprises == []
 	}
 
@@ -135,7 +138,7 @@ class EnterpriseDAOSpec extends Specification {
 			isVacancyQuery(sql) && sql.contains('WHERE v.enterprise_id IN (?)')
 		}) >> vacancyStatement
 		1 * vacancyStatement.setObject(1, 1)
-		2 * connection.prepareStatement({ isVacancyCompetenceQuery(it) }) >> vacancyCompetenceStatement
+		1 * connection.prepareStatement({ isVacancyCompetenceQuery(it) }) >> vacancyCompetenceStatement
 		enterprise.id == 1
 		enterprise.vacancies*.id == [10, 11]
 		enterprise.vacancies[0].enterprise.is(enterprise)

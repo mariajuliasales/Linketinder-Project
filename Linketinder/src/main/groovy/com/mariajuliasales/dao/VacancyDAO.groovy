@@ -1,5 +1,6 @@
 package com.mariajuliasales.dao
 
+import com.mariajuliasales.model.Competence
 import com.mariajuliasales.model.Enterprise
 import com.mariajuliasales.model.Vacancy
 import com.mariajuliasales.model.VacancyStatus
@@ -133,8 +134,10 @@ class VacancyDAO implements VacancyRepository {
 		List<Vacancy> vacancies = SqlExecutor.query(connection, sql, parameters) { ResultSet row ->
 			mapRow(row, enterprisesById)
 		}
+		Map<Integer, List<Competence>> competencesByVacancy =
+				competenceLinkDAO.findLinkedByOwners(connection, CompetenceLink.VACANCY, vacancies*.id)
 		vacancies.each { Vacancy vacancy ->
-			vacancy.competences = competenceLinkDAO.findLinked(connection, CompetenceLink.VACANCY, vacancy.id)
+			vacancy.competences = competencesByVacancy[vacancy.id] ?: []
 		}
 		vacancies
 	}
